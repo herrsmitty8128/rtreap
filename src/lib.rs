@@ -153,7 +153,6 @@ where
             if l < treap_size {
                 let p: usize = self.treap[n].parent;
                 self.treap[l].parent = p;
-                // fix the parent node pointer
                 if p < treap_size {
                     if n == self.treap[p].left {
                         self.treap[p].left = l;
@@ -164,13 +163,11 @@ where
                     self.root = l;
                 }
                 self.treap[n].parent = l;
-
                 let r: usize = self.treap[l].right;
                 self.treap[n].left = r;
                 if r < treap_size {
-                    self.treap[r].parent = n;                
+                    self.treap[r].parent = n;
                 }
-
                 self.treap[l].right = n;
             }
         }
@@ -193,18 +190,16 @@ where
                     self.root = r;
                 }
                 self.treap[n].parent = r;
-
                 let l: usize = self.treap[r].left;
                 self.treap[n].right = l;
                 if l < treap_size {
-                    self.treap[l].parent = n;                
+                    self.treap[l].parent = n;
                 }
-                
                 self.treap[r].left = n;
             }
         }
     }
-    
+
     pub fn insert(&mut self, key: K, priority: P) -> Result<()> {
         let new_node: usize = self.treap.len();
         self.treap.push(Node::new(key, priority));
