@@ -147,31 +147,40 @@ where
     }
 
     fn rotate_right(&mut self, n: usize) -> Result<()> {
-        if n >= self.treap.len() {
+        let treap_size: usize = self.treap.len();
+        if n >= treap_size {
             Err(Error::new(
                 ErrorKind::IndexOutOfBounds,
                 "The node does not exist in the treap.",
             ))
         } else {
             let l: usize = self.treap[n].left;
-            if l >= self.treap.len() {
+            if l >= treap_size {
                 Err(Error::new(
                     ErrorKind::RotationError,
                     "No left node to rotate to the right.",
                 ))
             } else {
+                let p: usize = self.treap[n].parent;
+                self.treap[l].parent = p;
                 // fix the parent node pointer
-                if n == self.root {
+                if p >= treap_size {
                     self.root = l;
                 } else {
-                    let p: usize = self.treap[n].parent;
                     if n == self.treap[p].left {
                         self.treap[p].left = l;
                     } else {
                         self.treap[p].right = l;
                     }
                 }
-                self.treap[n].left = self.treap[l].right;
+                self.treap[n].parent = l;
+
+                let r: usize = self.treap[l].right;
+                self.treap[n].left = r;
+                if r >= treap_size {
+                    self.treap[r].parent = n;                
+                }
+
                 self.treap[l].right = n;
                 Ok(())
             }
@@ -179,31 +188,40 @@ where
     }
 
     fn rotate_left(&mut self, n: usize) -> Result<()> {
-        if n >= self.treap.len() {
+        let treap_size: usize = self.treap.len();
+        if n >= treap_size {
             Err(Error::new(
                 ErrorKind::IndexOutOfBounds,
                 "The node does not exist in the treap.",
             ))
         } else {
             let r: usize = self.treap[n].right;
-            if r >= self.treap.len() {
+            if r >= treap_size {
                 Err(Error::new(
                     ErrorKind::RotationError,
                     "No left node to rotate to the right.",
                 ))
             } else {
                 // fix the parent node pointer
-                if n == self.root {
+                let p: usize = self.treap[n].parent;
+                self.treap[r].parent = p;
+                if p >= treap_size {
                     self.root = r;
                 } else {
-                    let p: usize = self.treap[n].parent;
                     if n == self.treap[p].left {
                         self.treap[p].left = r;
                     } else {
                         self.treap[p].right = r;
                     }
                 }
-                self.treap[n].right = self.treap[r].left;
+                self.treap[n].parent = r;
+
+                let l: usize = self.treap[r].left;
+                self.treap[n].right = l;
+                if l >= treap_size {
+                    self.treap[l].parent = n;                
+                }
+                
                 self.treap[r].left = n;
                 Ok(())
             }
