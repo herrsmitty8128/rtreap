@@ -90,24 +90,30 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct Treap<K, P>
+pub struct Treap<K, P, const MAX_HEAP: bool>
 where
-    K: Copy + Eq + PartialEq + Ord,
-    P: Copy + Eq + PartialEq + Ord,
+    K: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
+    P: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
 {
     treap: Vec<Node<K, P>>,
     root: usize,
+    sort_order: Ordering,
 }
 
-impl<K, P> Treap<K, P>
+impl<K, P, const MAX_HEAP: bool> Treap<K, P, MAX_HEAP>
 where
-    K: Copy + Eq + PartialEq + Ord,
-    P: Copy + Eq + PartialEq + Ord,
+    K: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
+    P: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
 {
     pub fn new() -> Self {
         Self {
             treap: Vec::new(),
             root: NIL,
+            sort_order: if MAX_HEAP {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            },
         }
     }
 
@@ -115,6 +121,11 @@ where
         Self {
             treap: Vec::with_capacity(capacity),
             root: NIL,
+            sort_order: if MAX_HEAP {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            },
         }
     }
 
@@ -134,10 +145,14 @@ where
         }
     }
 
+    pub fn root(&self) -> usize {
+        self.root
+    }
+
     pub fn search(&self, key: &K) -> Option<usize> {
         let mut n: usize = self.root;
         while n < self.treap.len() {
-            match self.treap[n].key.cmp(key) {
+            match key.cmp(&self.treap[n].key) {// self.treap[n].key.cmp(key) {
                 Ordering::Equal => return Some(n),
                 Ordering::Less => n = self.treap[n].left,
                 Ordering::Greater => n = self.treap[n].right,
@@ -200,54 +215,91 @@ where
         }
     }
 
+    /// Inserts a new node containing `key` and `priority` into the treap.
+    ///
+    /// ## Examples:
+    ///
+    /// ```
+    /// use rtreap::{Treap, Node};
+    ///
+    /// let mut treap: Treap<usize, usize, false> = Treap::new();
+    /// assert!(treap.insert(123, 456).is_ok(), "Treap insertion failed.");
+    /// ```
     pub fn insert(&mut self, key: K, priority: P) -> Result<()> {
         let new_node: usize = self.treap.len();
         self.treap.push(Node::new(key, priority));
-        if self.treap.len() == 1 {
+        if new_node == 0 {
+            // new_node is the only node and the new root
             self.root = new_node;
         } else {
+            // perform a BST insertion
             let mut node: usize = self.root;
-            let mut parent: usize = NIL;
-            while node != NIL {
-                parent = node;
-                node = if self.treap[node].key <= key {
-                    self.treap[node].left
+            loop {
+                if key <= self.treap[node].key {
+                    if self.treap[node].left == NIL {
+                        self.treap[node].left = new_node;
+                        self.treap[new_node].parent = node;
+                        break;
+                    } else {
+                        node = self.treap[node].left;
+                    }
                 } else {
-                    self.treap[node].right
-                };
+                    if self.treap[node].right == NIL {
+                        self.treap[node].right = new_node;
+                        self.treap[new_node].parent = node;
+                        break;
+                    } else {
+                        node = self.treap[node].right;
+                    }
+                }
             }
-            if key <= self.treap[parent].key {
-                self.treap[parent].left = new_node;
-            } else {
-                self.treap[parent].right = new_node;
-            }
-            self.treap[new_node].parent = parent;
+            // fix up the heap priorities
             while self.treap[new_node].parent != NIL
-                && self.treap[new_node].priority < self.treap[self.treap[new_node].parent].priority
+                && self.treap[new_node]
+                    .priority
+                    .cmp(&self.treap[self.treap[new_node].parent].priority)
+                    == self.sort_order
             {
                 let p: usize = self.treap[new_node].parent;
-                if new_node == self.treap[p].left {
-                    self.rotate_right(p);
-                } else {
+                if new_node == self.treap[p].right {
                     self.rotate_left(p);
+                } else {
+                    self.rotate_right(p);
                 }
             }
         }
         Ok(())
     }
 
-    fn swap_remove(&mut self, index: usize) -> Node<K, P> {
-        let c: usize = self.treap.len() - 1; // get the index of the last node
-        let p: usize = self.treap[c].parent; // get the index of the parent of the last node
-        if c != index && p < self.treap.len() {
-            let parent: &mut Node<K, P> = &mut self.treap[p]; // reference to the parent
-            if parent.left == c {
-                parent.left = index;
-            } else {
-                parent.right = index;
+    fn swap_remove(&mut self, index: usize) -> Result<Node<K, P>> {
+        let treap_size: usize = self.treap.len();
+        if index < treap_size {
+            let n: usize = self.treap.len() - 1; // get the index of the last node
+            if n != index {
+                let p: usize = self.treap[n].parent;
+                let l: usize = self.treap[n].left;
+                let r: usize = self.treap[n].right;
+                if p < treap_size {
+                    if self.treap[p].left == n {
+                        self.treap[p].left = index;
+                    } else {
+                        self.treap[p].right = index;
+                    }
+                }
+                if l < treap_size {
+                    self.treap[l].parent = index;
+                }
+                if r < treap_size {
+                    self.treap[r].parent = index;
+                }
+                if n == self.root {
+                    self.root = index;
+                }
             }
+            Ok(self.treap.swap_remove(index))
+        } else {
+            Err(Error::new(ErrorKind::IndexOutOfBounds, ""))
         }
-        self.treap.swap_remove(index)
     }
 
     fn private_remove(&mut self, n: usize) -> Result<Node<K, P>> {
@@ -258,13 +310,15 @@ where
             ))
         } else if self.treap.len() == 1 {
             self.root = NIL;
-            Ok(self.treap.pop().expect("Should never reach this point."))
+            Ok(self.treap.pop().expect("treap.pop() should never panic"))
         } else {
             while !self.treap[n].is_leaf() {
                 if self.treap[n].left != NIL
                     && (self.treap[n].right == NIL
-                        || self.treap[self.treap[n].left].priority
-                            > self.treap[self.treap[n].right].priority)
+                        || self.treap[self.treap[n].left]
+                            .priority
+                            .cmp(&self.treap[self.treap[n].right].priority)
+                            == self.sort_order)
                 {
                     self.rotate_right(n);
                 } else {
@@ -277,12 +331,16 @@ where
             } else {
                 self.treap[p].right = NIL;
             }
-            Ok(self.swap_remove(n))
+            self.swap_remove(n)
         }
     }
 
     pub fn update(&mut self) -> Result<()> {
         Ok(())
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Node<K, P>> {
+        self.treap.iter()
     }
 
     pub fn remove(&mut self, key: &K) -> Option<Node<K, P>> {
@@ -299,5 +357,35 @@ where
         } else {
             self.private_remove(self.root).ok()
         }
+    }
+
+    /// Returns true if the correct priority is on top of the treap.
+    /// Please note that this function is intended for use during testing.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// use rtreap::Treap;
+    /// use std::cmp::Ordering;
+    ///
+    /// let mut v: Vec<usize> = Vec::new();
+    /// let mut treap: Treap<usize, usize, false> = Treap::new();
+    /// treap.insert(1, 234);
+    /// treap.insert(333, 21);
+    /// treap.insert(74, 12);
+    /// treap.insert(559, 32);
+    /// assert!(treap.heap_is_valid());
+    /// ```
+    #[doc(hidden)]
+    pub fn heap_is_valid(&self) -> bool {
+        if !self.treap.is_empty() {
+            assert!(self.root < self.treap.len(), "the root {} is not found", self.root);
+            for i in 0..self.treap.len() {
+                if self.treap[i].priority.cmp(&self.treap[self.root].priority) == self.sort_order {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
