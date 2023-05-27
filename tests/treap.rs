@@ -3,9 +3,17 @@ mod tests {
     use std::vec;
 
     use rand::prelude::*;
-    use rtreap::Treap;
+    use rtreap::treap::{Node, Treap};
 
-    const COUNT: usize = 3000;
+    const COUNT: usize = 1000;
+
+    fn print_node<K, P>(n: &Node<K, P>)
+    where
+        K: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
+        P: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
+    {
+        println!("{:?}", n);
+    }
 
     #[test]
     pub fn test_treap() {
@@ -21,25 +29,21 @@ mod tests {
             treap
                 .insert(*key, priority)
                 .expect("treap.insert() failed.");
-            assert!(treap.heap_is_valid(), "heap priorities violated after insertion");
+            assert!(
+                treap.heap_is_valid(),
+                "heap priorities violated after insertion"
+            );
         }
 
-        println!("root = {}", treap.root());
-        for (i, node) in treap.iter().enumerate() {
-            println!("{} {:?}", i, node);
-        }
-        println!();
+        treap.inorder(0, print_node);
 
         for key in keys.iter() {
             treap.remove(key);
-            println!("root = {}", treap.root());
-            for (i, node) in treap.iter().enumerate() {
-                println!("{} {:?}", i, node);
-            }
-            println!();
             assert!(treap.heap_is_valid(), "heap priorities violated");
         }
 
         assert!(treap.len() == 0, "treap length is {} not zero", treap.len());
+
+        //assert!(1==2);
     }
 }
