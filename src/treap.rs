@@ -176,7 +176,9 @@ where
     /// ```
     pub fn insert(&mut self, key: K, priority: P) -> Result<()> {
         let new_node: usize =
-            bst::insert(&mut self.treap, &mut self.root, Node::new(key, priority));
+            bst::insert(&mut self.treap, &mut self.root, Node::new(key, priority)).or(Err(
+                Error::new(ErrorKind::IndexOutOfBounds, "Key already exists."),
+            ))?;
         // fix up the heap priorities
         while self.treap[new_node].parent != bst::NIL
             && self.treap[new_node]

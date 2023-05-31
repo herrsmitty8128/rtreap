@@ -21,144 +21,262 @@ where
     fn key(&self) -> &K;
 }
 
-pub fn insert<K, T>(tree: &mut Vec<T>, root: &mut usize, node: T) -> usize
+pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
 where
-    T: Node<K>,
     K: Ord + Copy,
+    T: Node<K>,
 {
-    let new_node: usize = tree.len();
-    tree.push(node);
-    if new_node == 0 {
-        // new_node is the only node and the new root
-        *root = new_node;
-    } else {
-        // perform a BST insertion
-        let mut n: usize = *root;
-        loop {
-            if tree[new_node].key().cmp(tree[n].key()) == Ordering::Greater {
-                if tree[n].right() == NIL {
-                    tree[n].set_right(new_node);
-                    tree[new_node].set_parent(n);
-                    break;
-                } else {
-                    n = tree[n].right();
-                }
-            } else if tree[n].left() == NIL {
-                tree[n].set_left(new_node);
-                tree[new_node].set_parent(n);
-                break;
+    let len: usize = nodes.len();
+    if src < len && dst < len {
+        let p: usize = nodes[dst].parent();
+        if p < len {
+            if dst == nodes[p].left() {
+                nodes[p].set_left(src);
             } else {
-                n = tree[n].left();
+                nodes[p].set_right(src);
+            }
+        } else {
+            *root = src;
+        }
+        nodes[src].set_parent(p);
+    }
+}
+
+pub fn successor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    let len: usize = nodes.len();
+    if index < len {
+        let r: usize = nodes[index].right();
+        if r < len {
+            return minimum(nodes, r);
+        } else {
+            let mut p: usize = nodes[index].parent();
+            while p < len {
+                if index == nodes[p].left() {
+                    return Some(p);
+                } else {
+                    index = p;
+                    p = nodes[p].parent();
+                }
             }
         }
     }
-    new_node
+    None
 }
 
-pub fn search<K, T>(tree: &[T], mut node: usize, key: &K) -> Option<usize>
+pub fn predecessor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    let len: usize = nodes.len();
+    if index < len {
+        let l: usize = nodes[index].left();
+        if l < len {
+            return maximum(nodes, l);
+        } else {
+            let mut p: usize = nodes[index].parent();
+            while p < len {
+                if index == nodes[p].right() {
+                    return Some(p);
+                } else {
+                    index = p;
+                    p = nodes[p].parent();
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn minimum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    let num_nodes: usize = nodes.len();
+    while index < num_nodes {
+        let left: usize = nodes[index].left();
+        if left < num_nodes {
+            return Some(index);
+        } else {
+            index = left;
+        }
+    }
+    None
+}
+
+pub fn maximum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    let num_nodes: usize = nodes.len();
+    while index < num_nodes {
+        let right: usize = nodes[index].right();
+        if right < num_nodes {
+            return Some(index);
+        } else {
+            index = right;
+        }
+    }
+    None
+}
+
+pub fn insert<K, T>(
+    nodes: &mut Vec<T>,
+    root: &mut usize,
+    node: T,
+) -> std::result::Result<usize, usize>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    let new_node: usize = nodes.len();
+    if new_node == 0 {
+        nodes.push(node);
+        *root = new_node;
+    } else {
+        let mut n: usize = *root;
+        let key: &K = &node.key();
+        loop {
+            match key.cmp(nodes[n].key()) {
+                Ordering::Greater => {
+                    if nodes[n].right() < new_node {
+                        n = nodes[n].right();
+                    } else {
+                        nodes.push(node);
+                        nodes[n].set_right(new_node);
+                        nodes[new_node].set_parent(n);
+                        break;
+                    }
+                }
+                Ordering::Less => {
+                    if nodes[n].left() < new_node {
+                        n = nodes[n].left();
+                    } else {
+                        nodes.push(node);
+                        nodes[n].set_left(new_node);
+                        nodes[new_node].set_parent(n);
+                        break;
+                    }
+                }
+                Ordering::Equal => {
+                    return Err(n);
+                }
+            }
+        }
+    }
+    Ok(new_node)
+}
+
+pub fn search<K, T>(nodes: &[T], mut root: usize, key: &K) -> Option<usize>
 where
     K: Ord,
     T: Node<K>,
 {
-    while node < tree.len() {
-        match key.cmp(tree[node].key()) {
-            Ordering::Equal => return Some(node),
-            Ordering::Less => node = tree[node].left(),
-            Ordering::Greater => node = tree[node].right(),
+    while root < nodes.len() {
+        match key.cmp(nodes[root].key()) {
+            Ordering::Equal => return Some(root),
+            Ordering::Less => root = nodes[root].left(),
+            Ordering::Greater => root = nodes[root].right(),
         };
     }
     None
 }
 
-pub fn rotate_right<K, T>(tree: &mut [T], root: &mut usize, node: usize)
+pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, node: usize)
 where
     T: Node<K>,
 {
-    let treap_size: usize = tree.len();
+    let treap_size: usize = nodes.len();
     if node < treap_size {
-        let l: usize = tree[node].left();
+        let l: usize = nodes[node].left();
         if l < treap_size {
-            let p: usize = tree[node].parent();
-            tree[l].set_parent(p);
+            let p: usize = nodes[node].parent();
+            nodes[l].set_parent(p);
             if p < treap_size {
-                if node == tree[p].left() {
-                    tree[p].set_left(l);
+                if node == nodes[p].left() {
+                    nodes[p].set_left(l);
                 } else {
-                    tree[p].set_right(l);
+                    nodes[p].set_right(l);
                 }
             } else {
                 *root = l;
             }
-            tree[node].set_parent(l);
-            let r: usize = tree[l].right();
-            tree[node].set_left(r);
+            nodes[node].set_parent(l);
+            let r: usize = nodes[l].right();
+            nodes[node].set_left(r);
             if r < treap_size {
-                tree[r].set_parent(node);
+                nodes[r].set_parent(node);
             }
-            tree[l].set_right(node);
+            nodes[l].set_right(node);
         }
     }
 }
 
-pub fn rotate_left<K, T>(tree: &mut [T], root: &mut usize, node: usize)
+pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, node: usize)
 where
     T: Node<K>,
 {
-    let treap_size: usize = tree.len();
+    let treap_size: usize = nodes.len();
     if node < treap_size {
-        let r: usize = tree[node].right();
+        let r: usize = nodes[node].right();
         if r < treap_size {
-            let p: usize = tree[node].parent();
-            tree[r].set_parent(p);
+            let p: usize = nodes[node].parent();
+            nodes[r].set_parent(p);
             if p < treap_size {
-                if node == tree[p].left() {
-                    tree[p].set_left(r);
+                if node == nodes[p].left() {
+                    nodes[p].set_left(r);
                 } else {
-                    tree[p].set_right(r);
+                    nodes[p].set_right(r);
                 }
             } else {
                 *root = r;
             }
-            tree[node].set_parent(r);
-            let l: usize = tree[r].left();
-            tree[node].set_right(l);
+            nodes[node].set_parent(r);
+            let l: usize = nodes[r].left();
+            nodes[node].set_right(l);
             if l < treap_size {
-                tree[l].set_parent(node);
+                nodes[l].set_parent(node);
             }
-            tree[r].set_left(node);
+            nodes[r].set_left(node);
         }
     }
 }
 
-pub fn swap_remove<K, T>(tree: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
+pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
 where
     T: Node<K>,
 {
-    let treap_size: usize = tree.len();
+    let treap_size: usize = nodes.len();
     if index < treap_size {
         let n: usize = treap_size - 1; // get the index of the last node
         if n != index {
-            let p: usize = tree[n].parent();
-            let l: usize = tree[n].left();
-            let r: usize = tree[n].right();
+            let p: usize = nodes[n].parent();
+            let l: usize = nodes[n].left();
+            let r: usize = nodes[n].right();
             if p < treap_size {
-                if tree[p].left() == n {
-                    tree[p].set_left(index);
+                if nodes[p].left() == n {
+                    nodes[p].set_left(index);
                 } else {
-                    tree[p].set_right(index);
+                    nodes[p].set_right(index);
                 }
             }
             if l < treap_size {
-                tree[l].set_parent(index);
+                nodes[l].set_parent(index);
             }
             if r < treap_size {
-                tree[r].set_parent(index);
+                nodes[r].set_parent(index);
             }
             if n == *root {
                 *root = index;
             }
         }
-        Ok(tree.swap_remove(index))
+        Ok(nodes.swap_remove(index))
     } else {
         Err(Error::new(
             ErrorKind::IndexOutOfBounds,
@@ -167,29 +285,29 @@ where
     }
 }
 
-pub fn inorder<K, F, T>(tree: &[T], mut node: usize, callback: F)
+pub fn inorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
     F: Fn(&T),
     T: Node<K>,
 {
     let mut prev: usize = node;
-    while node < tree.len() {
-        if tree[node].right() != prev {
-            if tree[node].left() != prev {
-                while tree[node].left() != NIL {
-                    node = tree[node].left();
+    while node < nodes.len() {
+        if nodes[node].right() != prev {
+            if nodes[node].left() != prev {
+                while nodes[node].left() != NIL {
+                    node = nodes[node].left();
                 }
             }
-            callback(&tree[node]);
-            if tree[node].right() != NIL {
-                node = tree[node].right();
+            callback(&nodes[node]);
+            if nodes[node].right() != NIL {
+                node = nodes[node].right();
                 loop {
-                    while tree[node].left() != NIL {
-                        node = tree[node].left();
+                    while nodes[node].left() != NIL {
+                        node = nodes[node].left();
                     }
-                    callback(&tree[node]);
-                    if tree[node].right() != NIL {
-                        node = tree[node].right();
+                    callback(&nodes[node]);
+                    if nodes[node].right() != NIL {
+                        node = nodes[node].right();
                     } else {
                         break;
                     }
@@ -197,79 +315,79 @@ where
             }
         }
         prev = node;
-        node = tree[node].parent();
+        node = nodes[node].parent();
     }
 }
 
-pub fn preorder<K, F, T>(tree: &[T], mut node: usize, callback: F)
+pub fn preorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
     F: Fn(&T),
     T: Node<K>,
 {
     let mut prev = node;
     while node != NIL {
-        //go down the tree
-        if tree[node].right() != prev {
-            if tree[node].left() != prev {
-                callback(&tree[node]);
-                while tree[node].left() != NIL {
-                    node = tree[node].left();
-                    callback(&tree[node]);
+        //go down the nodes
+        if nodes[node].right() != prev {
+            if nodes[node].left() != prev {
+                callback(&nodes[node]);
+                while nodes[node].left() != NIL {
+                    node = nodes[node].left();
+                    callback(&nodes[node]);
                 }
             }
-            if tree[node].right() != NIL {
-                node = tree[node].right();
-                callback(&tree[node]);
+            if nodes[node].right() != NIL {
+                node = nodes[node].right();
+                callback(&nodes[node]);
                 loop {
-                    while tree[node].left() != NIL {
-                        node = tree[node].left();
-                        callback(&tree[node]);
+                    while nodes[node].left() != NIL {
+                        node = nodes[node].left();
+                        callback(&nodes[node]);
                     }
-                    if tree[node].right() != NIL {
-                        node = tree[node].right();
-                        callback(&tree[node]);
+                    if nodes[node].right() != NIL {
+                        node = nodes[node].right();
+                        callback(&nodes[node]);
                     } else {
                         break;
                     }
                 }
             }
         }
-        //go up the tree
+        //go up the nodes
         prev = node;
-        node = tree[node].parent();
+        node = nodes[node].parent();
     }
 }
 
-pub fn postorder<K, F, T>(tree: &[T], mut node: usize, callback: F)
+pub fn postorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
     F: Fn(&T),
     T: Node<K>,
 {
     let mut prev = node;
     while node != NIL {
-        if tree[node].right() != prev {
-            if tree[node].left() != prev {
-                while tree[node].left() != NIL {
-                    node = tree[node].left()
+        if nodes[node].right() != prev {
+            if nodes[node].left() != prev {
+                while nodes[node].left() != NIL {
+                    node = nodes[node].left()
                 }
             }
-            if tree[node].right() != NIL {
-                node = tree[node].right();
+            if nodes[node].right() != NIL {
+                node = nodes[node].right();
                 loop {
-                    while tree[node].left() != NIL {
-                        node = tree[node].left()
+                    while nodes[node].left() != NIL {
+                        node = nodes[node].left()
                     }
-                    if tree[node].right() != NIL {
-                        node = tree[node].right();
+                    if nodes[node].right() != NIL {
+                        node = nodes[node].right();
                     } else {
                         break;
                     }
                 }
             }
         }
-        callback(&tree[node]);
+        callback(&nodes[node]);
         prev = node;
-        node = tree[node].parent();
+        node = nodes[node].parent();
     }
 }
 
@@ -285,15 +403,15 @@ fn showTrunks(trunk: &Trunk) {
     print!("{}", trunk.s);
 }
 
-fn print_tree<K>(tree: &[dyn Node<K>], root: usize, prev: Option<Trunk>, isLeft: bool) {
-    if root < tree.len() {
+fn print_nodes<K>(nodes: &[dyn Node<K>], root: usize, prev: Option<Trunk>, isLeft: bool) {
+    if root < nodes.len() {
         let prev_str: &'static str = "    ";
         let trunk = Trunk {
             prev,
             text: prev_str,
         };
 
-        print_tree(tree, tree[root].left, Some(trunk), true);
+        print_nodes(nodes, nodes[root].left, Some(trunk), true);
 
         if prev.is_none() {
             trunk.text = "----";
@@ -313,13 +431,13 @@ fn print_tree<K>(tree: &[dyn Node<K>], root: usize, prev: Option<Trunk>, isLeft:
         }
         trunk.text = "   |";
 
-        print_tree(tree, tree[root].right, Some(trunk), false);
+        print_nodes(nodes, nodes[root].right, Some(trunk), false);
     }
 }
 
-pub fn print_bst<K>(tree: &[Node<K>], root: usize) {
-    if root < tree.len() {
-        print_tree(tree, root, None, false);
+pub fn print_bst<K>(nodes: &[Node<K>], root: usize) {
+    if root < nodes.len() {
+        print_nodes(nodes, root, None, false);
         println!();
     }
 }

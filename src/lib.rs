@@ -8,4 +8,5 @@
 
 pub mod bst;
 pub mod error;
+pub mod rbtree;
 pub mod treap;
