@@ -79,11 +79,41 @@ where
     }
 }
 
-pub fn delete<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
+pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
 where
-    K: Ord + Copy,
     T: TreeNode<K>,
 {
+    let treap_size: usize = nodes.len();
+    if index < treap_size {
+        let n: usize = treap_size - 1; // get the index of the last node
+        if n != index {
+            let p: usize = nodes[n].parent();
+            let l: usize = nodes[n].left();
+            let r: usize = nodes[n].right();
+            if p < treap_size {
+                if nodes[p].left() == n {
+                    nodes[p].set_left(index);
+                } else {
+                    nodes[p].set_right(index);
+                }
+            }
+            if l < treap_size {
+                nodes[l].set_parent(index);
+            }
+            if r < treap_size {
+                nodes[r].set_parent(index);
+            }
+            if n == *root {
+                *root = index;
+            }
+        }
+        Ok(nodes.swap_remove(index))
+    } else {
+        Err(Error::new(
+            ErrorKind::IndexOutOfBounds,
+            "swap_remove() failed because ",
+        ))
+    }
 }
 
 pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
@@ -104,6 +134,51 @@ where
             *root = src;
         }
         nodes[src].set_parent(p);
+    }
+}
+
+/// Removes the node located at `index` from the tree and returns its key.
+/// Returns Err(Error) if `index` is out of bounds.
+/// 
+/// ## Example:
+///
+/// ```
+/// 
+/// ```
+pub fn delete<K, T>(
+    nodes: &mut Vec<T>,
+    root: &mut usize,
+    index: usize,
+) -> std::result::Result<T, Error>
+where
+    K: Ord + Copy,
+    T: TreeNode<K>,
+{
+    let len: usize = nodes.len();
+    if index < len {
+        if nodes[index].left() < len {
+            transplant(nodes, root, index, nodes[index].right());
+        } else if nodes[index].right() < len {
+            transplant(nodes, root, index, nodes[index].left());
+        } else {
+            let y: usize = minimum(nodes, nodes[index].right()).unwrap(); // should never panic
+            let r: usize = nodes[index].right();
+            let l: usize = nodes[index].left();
+            if y != r {
+                transplant(nodes, root, y, r);
+                nodes[y].set_right(r);
+                nodes[r].set_parent(y);
+            }
+            transplant(nodes, root, index, y);
+            nodes[y].set_left(l);
+            nodes[l].set_parent(y);
+        }
+        swap_remove(nodes, root, index)
+    } else {
+        Err(Error::new(
+            ErrorKind::IndexOutOfBounds,
+            "There is no node located at the provided index.",
+        ))
     }
 }
 
@@ -399,43 +474,6 @@ where
             }
             nodes[r].set_left(node);
         }
-    }
-}
-
-pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
-where
-    T: TreeNode<K>,
-{
-    let treap_size: usize = nodes.len();
-    if index < treap_size {
-        let n: usize = treap_size - 1; // get the index of the last node
-        if n != index {
-            let p: usize = nodes[n].parent();
-            let l: usize = nodes[n].left();
-            let r: usize = nodes[n].right();
-            if p < treap_size {
-                if nodes[p].left() == n {
-                    nodes[p].set_left(index);
-                } else {
-                    nodes[p].set_right(index);
-                }
-            }
-            if l < treap_size {
-                nodes[l].set_parent(index);
-            }
-            if r < treap_size {
-                nodes[r].set_parent(index);
-            }
-            if n == *root {
-                *root = index;
-            }
-        }
-        Ok(nodes.swap_remove(index))
-    } else {
-        Err(Error::new(
-            ErrorKind::IndexOutOfBounds,
-            "swap_remove() failed because ",
-        ))
     }
 }
 
