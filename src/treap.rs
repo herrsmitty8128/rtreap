@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<K, P> bst::Node<K> for Node<K, P>
+impl<K, P> bst::TreeNode<K> for Node<K, P>
 where
     K: Ord + Copy,
     P: Ord + Copy,

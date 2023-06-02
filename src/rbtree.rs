@@ -7,7 +7,7 @@ use crate::bst;
 const PARENT_MASK: usize = usize::MAX >> 1;
 const COLOR_MASK: usize = 1 << ((std::mem::size_of::<usize>() * 8) - 1);
 
-pub trait Node<K>: bst::Node<K>
+pub trait Node<K>: bst::TreeNode<K>
 where
     Self: Sized,
 {
@@ -155,7 +155,7 @@ pub mod map {
         }
     }
 
-    impl<K, V> bst::Node<K> for Node<K, V> {
+    impl<K, V> bst::TreeNode<K> for Node<K, V> {
         #[inline]
         fn key(&self) -> &K {
             &self.entry.0
@@ -212,7 +212,7 @@ pub mod map {
             }
         }
 
-        pub fn insert(&mut self, node: Node<K, V>)
+        /*pub fn insert(&mut self, node: Node<K, V>)
         where
             K: Ord + Copy,
         {
@@ -225,6 +225,6 @@ pub mod map {
                     self.inner[index].entry.1 = node.entry.1.clone();
                 }
             }
-        }
+        }*/
     }
 }

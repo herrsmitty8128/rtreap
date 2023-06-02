@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 /// Value used as a sentinel.
 pub const NIL: usize = usize::MAX;
 
-pub trait Node<K>
+pub trait TreeNode<K>
 where
     Self: Sized,
 {
@@ -21,10 +21,75 @@ where
     fn key(&self) -> &K;
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Node<K>
+where
+    Self: Sized,
+{
+    parent: usize,
+    left: usize,
+    right: usize,
+    value: K,
+}
+
+impl<K> Node<K>
+where
+    K: Ord,
+{
+    pub fn new(value: K) -> Self {
+        Self {
+            parent: NIL,
+            left: NIL,
+            right: NIL,
+            value,
+        }
+    }
+}
+
+impl<K> TreeNode<K> for Node<K>
+where
+    K: Ord,
+{
+    fn key(&self) -> &K {
+        &self.value
+    }
+
+    fn left(&self) -> usize {
+        self.left
+    }
+
+    fn parent(&self) -> usize {
+        self.parent
+    }
+
+    fn right(&self) -> usize {
+        self.right
+    }
+
+    fn set_left(&mut self, l: usize) {
+        self.left = l;
+    }
+
+    fn set_parent(&mut self, p: usize) {
+        self.parent = p;
+    }
+
+    fn set_right(&mut self, r: usize) {
+        self.right = r;
+    }
+}
+
+pub fn delete<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
+where
+    K: Ord + Copy,
+    T: TreeNode<K>,
+{
+}
+
 pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let len: usize = nodes.len();
     if src < len && dst < len {
@@ -45,7 +110,7 @@ where
 pub fn successor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let len: usize = nodes.len();
     if index < len {
@@ -70,7 +135,7 @@ where
 pub fn predecessor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let len: usize = nodes.len();
     if index < len {
@@ -92,40 +157,107 @@ where
     None
 }
 
+/// Returns the index of smallest value in the tree starting with the node at `index` or `None` if the tree is empty.
+///
+/// ```
+/// use rtreap::bst::{minimum, insert, Node, TreeNode, NIL};
+///
+/// let mut root: usize = NIL;
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let mut nodes: Vec<Node<usize>> = Vec::new();
+/// for n in values.iter() {
+///     insert(&mut nodes, &mut root, Node::new(*n));
+/// }
+///
+/// if let Some(i) = minimum(&nodes, root) {
+///     assert!(*nodes[i].key() == 1, "Minimum returned {} instead of 1", i);
+/// } else {
+///     panic!("Minimum returned None.");
+/// }
+/// ```
 pub fn minimum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let num_nodes: usize = nodes.len();
     while index < num_nodes {
         let left: usize = nodes[index].left();
         if left < num_nodes {
-            return Some(index);
-        } else {
             index = left;
+        } else {
+            return Some(index);
         }
     }
     None
 }
 
+/// Returns the index of largest value in the tree starting with the node at `index` or `None` if the tree is empty.
+///
+/// ```
+/// use rtreap::bst::{maximum, insert, Node, TreeNode, NIL};
+///
+/// let mut root: usize = NIL;
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let mut nodes: Vec<Node<usize>> = Vec::new();
+/// for n in values.iter() {
+///     insert(&mut nodes, &mut root, Node::new(*n));
+/// }
+///
+/// if let Some(i) = maximum(&nodes, root) {
+///     assert!(*nodes[i].key() == 9, "Maximum returned {} instead of 9", i);
+/// } else {
+///     panic!("Maximum returned None.");
+/// }
+/// ```
 pub fn maximum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let num_nodes: usize = nodes.len();
     while index < num_nodes {
         let right: usize = nodes[index].right();
         if right < num_nodes {
-            return Some(index);
-        } else {
             index = right;
+        } else {
+            return Some(index);
         }
     }
     None
 }
 
+/// Inserts a node into the tree.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{minimum, maximum, insert, Node, TreeNode, NIL};
+///
+/// let mut root: usize = NIL;
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let mut nodes: Vec<Node<usize>> = Vec::new();
+/// for n in values.iter() {
+///     insert(&mut nodes, &mut root, Node::new(*n));
+/// }
+///
+/// assert!(values.len() == nodes.len(), "The tree does not contain the correct number of nodes.");
+///
+/// assert!(*nodes[root].key() == 5, "Invalid tree root node");
+///
+/// if let Some(i) = minimum(&nodes, root) {
+///     assert!(*nodes[i].key() == 1, "Minimum value is {} instead of 1", nodes[i].key());
+/// } else {
+///     panic!("Minimum() returned None");
+/// }
+///
+/// if let Some(i) = maximum(&nodes, root) {
+///     assert!(*nodes[i].key() == 9, "Maximum value is {} instead of 9", nodes[i].key());
+/// } else {
+///     panic!("Minimum() returned None");
+/// }
+///
+/// ```
 pub fn insert<K, T>(
     nodes: &mut Vec<T>,
     root: &mut usize,
@@ -133,7 +265,7 @@ pub fn insert<K, T>(
 ) -> std::result::Result<usize, usize>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let new_node: usize = nodes.len();
     if new_node == 0 {
@@ -173,10 +305,32 @@ where
     Ok(new_node)
 }
 
+/// Searches a vector of nodes, sorted as a red-black tree, for `key` starting from `root`.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{search, insert, Node, TreeNode, NIL};
+///
+/// let mut root: usize = NIL;
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let mut nodes: Vec<Node<usize>> = Vec::new();
+/// for n in values.iter() {
+///     insert(&mut nodes, &mut root, Node::new(*n));
+/// }
+///
+/// assert!(*nodes[root].key() == 5, "Invalid root");
+///
+/// if let Some(search_result) = search(&nodes, root, &4) {
+///     assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
+/// } else {
+///     panic!("Search failed to locate the number 4.");
+/// };
+/// ```
 pub fn search<K, T>(nodes: &[T], mut root: usize, key: &K) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     while root < nodes.len() {
         match key.cmp(nodes[root].key()) {
@@ -190,7 +344,7 @@ where
 
 pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, node: usize)
 where
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let treap_size: usize = nodes.len();
     if node < treap_size {
@@ -220,7 +374,7 @@ where
 
 pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, node: usize)
 where
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let treap_size: usize = nodes.len();
     if node < treap_size {
@@ -250,7 +404,7 @@ where
 
 pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
 where
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let treap_size: usize = nodes.len();
     if index < treap_size {
@@ -288,7 +442,7 @@ where
 pub fn inorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
     F: Fn(&T),
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let mut prev: usize = node;
     while node < nodes.len() {
@@ -322,7 +476,7 @@ where
 pub fn preorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
     F: Fn(&T),
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let mut prev = node;
     while node != NIL {
@@ -361,7 +515,7 @@ where
 pub fn postorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
     F: Fn(&T),
-    T: Node<K>,
+    T: TreeNode<K>,
 {
     let mut prev = node;
     while node != NIL {
@@ -403,7 +557,7 @@ fn showTrunks(trunk: &Trunk) {
     print!("{}", trunk.s);
 }
 
-fn print_nodes<K>(nodes: &[dyn Node<K>], root: usize, prev: Option<Trunk>, isLeft: bool) {
+fn print_nodes<K>(nodes: &[dyn TreeNode<K>], root: usize, prev: Option<Trunk>, isLeft: bool) {
     if root < nodes.len() {
         let prev_str: &'static str = "    ";
         let trunk = Trunk {
@@ -435,7 +589,7 @@ fn print_nodes<K>(nodes: &[dyn Node<K>], root: usize, prev: Option<Trunk>, isLef
     }
 }
 
-pub fn print_bst<K>(nodes: &[Node<K>], root: usize) {
+pub fn print_bst<K>(nodes: &[TreeNode<K>], root: usize) {
     if root < nodes.len() {
         print_nodes(nodes, root, None, false);
         println!();
