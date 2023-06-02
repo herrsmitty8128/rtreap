@@ -79,7 +79,7 @@ where
     }
 }
 
-pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
+pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Option<T>
 where
     T: TreeNode<K>,
 {
@@ -107,12 +107,9 @@ where
                 *root = index;
             }
         }
-        Ok(nodes.swap_remove(index))
+        Some(nodes.swap_remove(index))
     } else {
-        Err(Error::new(
-            ErrorKind::IndexOutOfBounds,
-            "swap_remove() failed because ",
-        ))
+        None
     }
 }
 
@@ -149,7 +146,7 @@ pub fn delete<K, T>(
     nodes: &mut Vec<T>,
     root: &mut usize,
     index: usize,
-) -> std::result::Result<T, Error>
+) -> Option<T>
 where
     K: Ord + Copy,
     T: TreeNode<K>,
@@ -175,10 +172,7 @@ where
         }
         swap_remove(nodes, root, index)
     } else {
-        Err(Error::new(
-            ErrorKind::IndexOutOfBounds,
-            "There is no node located at the provided index.",
-        ))
+        None
     }
 }
 
