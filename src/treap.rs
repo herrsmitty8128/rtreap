@@ -52,7 +52,12 @@ where
     Ok(())
 }
 
-pub fn delete<K, P, T>(nodes: &mut Vec<T>, root: &mut usize, sort_order: Ordering, i: usize) -> Result<T>
+pub fn delete<K, P, T>(
+    nodes: &mut Vec<T>,
+    root: &mut usize,
+    sort_order: Ordering,
+    i: usize,
+) -> Result<T>
 where
     K: Ord + Copy,
     P: Ord + Copy,
@@ -284,7 +289,12 @@ where
     /// assert!(treap.insert(123, 456).is_ok(), "Treap insertion failed.");
     /// ```
     pub fn insert(&mut self, key: K, priority: P) -> Result<()> {
-        insert(&mut self.treap, &mut self.root, self.sort_order, Node::from((key,priority)))
+        insert(
+            &mut self.treap,
+            &mut self.root,
+            self.sort_order,
+            Node::from((key, priority)),
+        )
     }
 
     pub fn update(&mut self) -> Result<()> {
@@ -295,10 +305,10 @@ where
         self.treap.iter()
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<(K,P)> {
+    pub fn remove(&mut self, key: &K) -> Option<(K, P)> {
         if let Some(i) = self.search(key) {
             match delete(&mut self.treap, &mut self.root, self.sort_order, i) {
-                Ok(x) => Some(x.entry),
+                Ok(node) => Some(node.entry),
                 Err(_) => None,
             }
         } else {
@@ -306,13 +316,13 @@ where
         }
     }
 
-    pub fn top(&mut self) -> Option<(K,P)> {
+    pub fn top(&mut self) -> Option<(K, P)> {
         if self.treap.is_empty() {
             None
         } else {
             let i: usize = self.root;
             match delete(&mut self.treap, &mut self.root, self.sort_order, i) {
-                Ok(x) => Some(x.entry),
+                Ok(node) => Some(node.entry),
                 Err(_) => None,
             }
         }
@@ -344,7 +354,12 @@ where
                 self.root
             );
             for i in 0..self.treap.len() {
-                if self.treap[i].entry().1.cmp(&self.treap[self.root].entry().1) == self.sort_order {
+                if self.treap[i]
+                    .entry()
+                    .1
+                    .cmp(&self.treap[self.root].entry().1)
+                    == self.sort_order
+                {
                     return false;
                 }
             }
