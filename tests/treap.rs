@@ -7,10 +7,9 @@ mod tests {
 
     const COUNT: usize = 1000;
 
-    fn print_node<K, P>(n: &Node<K, P>)
+    fn print_key<K>(n: &K)
     where
         K: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
-        P: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
     {
         println!("{:?}", n);
     }
@@ -35,7 +34,7 @@ mod tests {
             );
         }
 
-        treap.inorder(0, print_node);
+        treap.inorder(0, print_key);
 
         for key in keys.iter() {
             treap.remove(key);

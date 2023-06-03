@@ -7,7 +7,7 @@ use crate::bst;
 const PARENT_MASK: usize = usize::MAX >> 1;
 const COLOR_MASK: usize = 1 << ((std::mem::size_of::<usize>() * 8) - 1);
 
-pub trait Node<K>: bst::TreeNode<K>
+pub trait Node<E>: bst::TreeNode<E>
 where
     Self: Sized,
 {
@@ -84,7 +84,7 @@ where
     nodes[*root].set_black();
 }
 
-fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, node: T, child: T)
+fn transplant<K, T>(nodes: &mut [T], root: &mut usize, node: T, child: T)
 where
     K: Ord + Copy,
     T: Node<K>,
@@ -92,7 +92,7 @@ where
     // need to implement
 }
 
-fn delete_fixup<K, T>(nodes: &mut Vec<T>, index: usize)
+fn delete_fixup<K, T>(nodes: &mut [T], index: usize)
 where
     K: Ord,
     T: Node<K>,
@@ -100,9 +100,16 @@ where
     // need to implement
 }
 
+/*
 pub mod map {
 
     use crate::bst;
+
+    pub trait Entry<K, V> {
+        fn key(&self) -> &K;
+        fn value(&self) -> &V;
+        fn value_mut(&mut self) -> &mut V;
+    }
 
     #[derive(Debug, Clone, Copy)]
     pub struct Node<K, V> {
@@ -110,6 +117,20 @@ pub mod map {
         left: usize,
         right: usize,
         entry: (K, V),
+    }
+
+    impl<T> From<T> for Node<K, V>
+    where
+        T: bst::TreeNode<(K, V)>,
+    {
+        fn from(entry: T) -> Self {
+            Self {
+                parent: bst::NIL,
+                left: bst::NIL,
+                right: bst::NIL,
+                entry,
+            }
+        }
     }
 
     impl<K, V> Node<K, V> {
@@ -133,7 +154,7 @@ pub mod map {
         }
     }
 
-    impl<K, V> super::Node<K> for Node<K, V> {
+    impl<K, V, T> super::Node<T> for Node<K, V> {
         #[inline]
         fn is_black(&self) -> bool {
             self.parent & super::COLOR_MASK == 1
@@ -155,7 +176,7 @@ pub mod map {
         }
     }
 
-    impl<K, V> bst::TreeNode<K> for Node<K, V> {
+    impl<K, V, T> bst::TreeNode<T> for Node<K, V> {
         #[inline]
         fn key(&self) -> &K {
             &self.entry.0
@@ -228,3 +249,4 @@ pub mod map {
         }*/
     }
 }
+*/

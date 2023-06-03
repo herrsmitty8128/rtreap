@@ -6,9 +6,89 @@
  * Put crate documentation here...
  */
 
-use crate::bst; //::{inorder, rotate_left, rotate_right, search, swap_remove, Node, NIL};
+use crate::bst;
 use crate::error::{Error, ErrorKind, Result};
 use std::cmp::Ordering;
+
+pub trait TreapNode<K, P>: bst::TreeNode<K>
+where
+    Self: Sized,
+    K: Ord + Copy,
+    P: Ord + Copy,
+{
+    fn priority(&self) -> &P;
+    fn priority_mut(&mut self) -> &mut P;
+    fn entry(&self) -> &(K, P);
+    fn is_leaf(&self) -> bool;
+}
+
+pub fn insert<K, P, T>(
+    nodes: &mut Vec<T>,
+    root: &mut usize,
+    sort_order: Ordering,
+    entry: T,
+) -> Result<()>
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    T: TreapNode<K, P>,
+{
+    let new_node: usize = bst::insert(nodes, root, entry)
+        .map_err(|_| Error::new(ErrorKind::IndexOutOfBounds, "Key already exists."))?;
+    // fix up the heap priorities
+    while nodes[new_node].parent() < nodes.len()
+        && nodes[new_node]
+            .priority()
+            .cmp(&nodes[nodes[new_node].parent()].priority())
+            == sort_order
+    {
+        let p: usize = nodes[new_node].parent();
+        if new_node == nodes[p].right() {
+            bst::rotate_left(nodes, root, p);
+        } else {
+            bst::rotate_right(nodes, root, p);
+        }
+    }
+    Ok(())
+}
+
+pub fn delete<K, P, T>(nodes: &mut Vec<T>, root: &mut usize, sort_order: Ordering, i: usize) -> Result<T>
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    T: TreapNode<K, P>,
+{
+    if i >= nodes.len() {
+        Err(Error::new(
+            ErrorKind::IndexOutOfBounds,
+            "Index does not exist.",
+        ))
+    } else if nodes.len() == 1 {
+        *root = bst::NIL;
+        Ok(nodes.pop().expect("treap.pop() should never panic"))
+    } else {
+        while !nodes[i].is_leaf() {
+            if nodes[i].left() != bst::NIL
+                && (nodes[i].right() == bst::NIL
+                    || nodes[nodes[i].left()]
+                        .priority()
+                        .cmp(&nodes[nodes[i].right()].priority())
+                        == sort_order)
+            {
+                bst::rotate_right(nodes, root, i);
+            } else {
+                bst::rotate_left(nodes, root, i);
+            }
+        }
+        let p: usize = nodes[i].parent();
+        if nodes[p].left() == i {
+            nodes[p].set_left(bst::NIL);
+        } else {
+            nodes[p].set_right(bst::NIL);
+        }
+        bst::swap_remove(nodes, root, i)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Node<K, P>
@@ -19,8 +99,22 @@ where
     parent: usize,
     left: usize,
     right: usize,
-    key: K,
-    priority: P,
+    entry: (K, P),
+}
+
+impl<K, P> From<(K, P)> for Node<K, P>
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+{
+    fn from(entry: (K, P)) -> Self {
+        Self {
+            parent: bst::NIL,
+            left: bst::NIL,
+            right: bst::NIL,
+            entry,
+        }
+    }
 }
 
 impl<K, P> Node<K, P>
@@ -33,18 +127,33 @@ where
             parent: bst::NIL,
             left: bst::NIL,
             right: bst::NIL,
-            key,
-            priority,
+            entry: (key, priority),
         }
     }
+}
 
+impl<K, P> TreapNode<K, P> for Node<K, P>
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+{
     #[inline]
-    pub fn priority(&self) -> &P {
-        &self.priority
+    fn priority(&self) -> &P {
+        &self.entry.1
     }
 
     #[inline]
-    pub fn is_leaf(&self) -> bool {
+    fn priority_mut(&mut self) -> &mut P {
+        &mut self.entry.1
+    }
+
+    #[inline]
+    fn entry(&self) -> &(K, P) {
+        &self.entry
+    }
+
+    #[inline]
+    fn is_leaf(&self) -> bool {
         self.left == bst::NIL && self.right == bst::NIL
     }
 }
@@ -56,7 +165,7 @@ where
 {
     #[inline]
     fn key(&self) -> &K {
-        &self.key
+        &self.entry.0
     }
 
     #[inline]
@@ -175,58 +284,7 @@ where
     /// assert!(treap.insert(123, 456).is_ok(), "Treap insertion failed.");
     /// ```
     pub fn insert(&mut self, key: K, priority: P) -> Result<()> {
-        let new_node: usize =
-            bst::insert(&mut self.treap, &mut self.root, Node::new(key, priority)).or(Err(
-                Error::new(ErrorKind::IndexOutOfBounds, "Key already exists."),
-            ))?;
-        // fix up the heap priorities
-        while self.treap[new_node].parent != bst::NIL
-            && self.treap[new_node]
-                .priority
-                .cmp(&self.treap[self.treap[new_node].parent].priority)
-                == self.sort_order
-        {
-            let p: usize = self.treap[new_node].parent;
-            if new_node == self.treap[p].right {
-                bst::rotate_left(&mut self.treap, &mut self.root, p);
-            } else {
-                bst::rotate_right(&mut self.treap, &mut self.root, p);
-            }
-        }
-        Ok(())
-    }
-
-    fn private_remove(&mut self, n: usize) -> Result<Node<K, P>> {
-        if n >= self.treap.len() {
-            Err(Error::new(
-                ErrorKind::IndexOutOfBounds,
-                "Index does not exist.",
-            ))
-        } else if self.treap.len() == 1 {
-            self.root = bst::NIL;
-            Ok(self.treap.pop().expect("treap.pop() should never panic"))
-        } else {
-            while !self.treap[n].is_leaf() {
-                if self.treap[n].left != bst::NIL
-                    && (self.treap[n].right == bst::NIL
-                        || self.treap[self.treap[n].left]
-                            .priority
-                            .cmp(&self.treap[self.treap[n].right].priority)
-                            == self.sort_order)
-                {
-                    bst::rotate_right(&mut self.treap, &mut self.root, n);
-                } else {
-                    bst::rotate_left(&mut self.treap, &mut self.root, n);
-                }
-            }
-            let p: usize = self.treap[n].parent;
-            if self.treap[p].left == n {
-                self.treap[p].left = bst::NIL;
-            } else {
-                self.treap[p].right = bst::NIL;
-            }
-            bst::swap_remove(&mut self.treap, &mut self.root, n)
-        }
+        insert(&mut self.treap, &mut self.root, self.sort_order, Node::from((key,priority)))
     }
 
     pub fn update(&mut self) -> Result<()> {
@@ -237,19 +295,26 @@ where
         self.treap.iter()
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<Node<K, P>> {
-        if let Some(index) = self.search(key) {
-            self.private_remove(index).ok()
+    pub fn remove(&mut self, key: &K) -> Option<(K,P)> {
+        if let Some(i) = self.search(key) {
+            match delete(&mut self.treap, &mut self.root, self.sort_order, i) {
+                Ok(x) => Some(x.entry),
+                Err(_) => None,
+            }
         } else {
             None
         }
     }
 
-    pub fn top(&mut self) -> Option<Node<K, P>> {
+    pub fn top(&mut self) -> Option<(K,P)> {
         if self.treap.is_empty() {
             None
         } else {
-            self.private_remove(self.root).ok()
+            let i: usize = self.root;
+            match delete(&mut self.treap, &mut self.root, self.sort_order, i) {
+                Ok(x) => Some(x.entry),
+                Err(_) => None,
+            }
         }
     }
 
@@ -279,7 +344,7 @@ where
                 self.root
             );
             for i in 0..self.treap.len() {
-                if self.treap[i].priority.cmp(&self.treap[self.root].priority) == self.sort_order {
+                if self.treap[i].entry().1.cmp(&self.treap[self.root].entry().1) == self.sort_order {
                     return false;
                 }
             }
@@ -289,7 +354,7 @@ where
 
     pub fn inorder<F>(&self, n: usize, callback: F)
     where
-        F: Fn(&Node<K, P>),
+        F: Fn(&K),
     {
         bst::inorder(&self.treap, n, callback);
     }

@@ -22,26 +22,26 @@ where
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Node<K>
+pub struct Node<E>
 where
     Self: Sized,
 {
     parent: usize,
     left: usize,
     right: usize,
-    value: K,
+    key: E,
 }
 
-impl<K> Node<K>
+impl<K> From<K> for Node<K>
 where
     K: Ord,
 {
-    pub fn new(value: K) -> Self {
+    fn from(key: K) -> Self {
         Self {
             parent: NIL,
             left: NIL,
             right: NIL,
-            value,
+            key,
         }
     }
 }
@@ -51,7 +51,7 @@ where
     K: Ord,
 {
     fn key(&self) -> &K {
-        &self.value
+        &self.key
     }
 
     fn left(&self) -> usize {
@@ -79,7 +79,20 @@ where
     }
 }
 
-pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Option<T>
+pub fn build<K, T>(s: &[K]) -> (Vec<T>, usize)
+where
+    K: Ord + Copy,
+    T: TreeNode<K> + From<K>,
+{
+    let mut nodes: Vec<T> = Vec::new();
+    let mut root: usize = NIL;
+    for i in s {
+        insert(&mut nodes, &mut root, T::from(*i)).unwrap();
+    }
+    (nodes, root)
+}
+
+pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
 where
     T: TreeNode<K>,
 {
@@ -107,19 +120,23 @@ where
                 *root = index;
             }
         }
-        Some(nodes.swap_remove(index))
+        Ok(nodes.swap_remove(index))
     } else {
-        None
+        Err(Error::new(
+            ErrorKind::IndexOutOfBounds,
+            "Cannot delete a node that does not exist.",
+        ))
     }
 }
 
+/// Removes the nodes at index `dst` from the tree by replacing it with node at index `src`.
 pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
 where
     K: Ord + Copy,
     T: TreeNode<K>,
 {
     let len: usize = nodes.len();
-    if src < len && dst < len {
+    if dst < len {
         let p: usize = nodes[dst].parent();
         if p < len {
             if dst == nodes[p].left() {
@@ -130,39 +147,53 @@ where
         } else {
             *root = src;
         }
-        nodes[src].set_parent(p);
+        if src < len {
+            nodes[src].set_parent(p);
+        }
     }
 }
 
 /// Removes the node located at `index` from the tree and returns its key.
 /// Returns Err(Error) if `index` is out of bounds.
-/// 
+///
 /// ## Example:
 ///
 /// ```
-/// 
+/// use rtreap::bst::{TreeNode, Node, insert, NIL, delete};
+///
+/// let mut root: usize = NIL;
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let mut nodes: Vec<Node<usize>> = Vec::new();
+/// for n in values.iter() {
+///     insert(&mut nodes, &mut root, Node::from(*n));
+/// }
+///
+/// for i in (0..nodes.len()).rev() {
+///     assert!(root != NIL);
+///     assert!(!nodes.is_empty());
+///     delete(&mut nodes, &mut root, i).unwrap();
+/// }
+///
+/// assert!(nodes.is_empty(), "Failed to remove all nodes.");
+/// assert!(root == NIL, "root is not NIL.");
 /// ```
-pub fn delete<K, T>(
-    nodes: &mut Vec<T>,
-    root: &mut usize,
-    index: usize,
-) -> Option<T>
+pub fn delete<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
 where
     K: Ord + Copy,
     T: TreeNode<K>,
 {
     let len: usize = nodes.len();
     if index < len {
-        if nodes[index].left() < len {
-            transplant(nodes, root, index, nodes[index].right());
-        } else if nodes[index].right() < len {
-            transplant(nodes, root, index, nodes[index].left());
+        let r: usize = nodes[index].right();
+        let l: usize = nodes[index].left();
+        if l >= len {
+            transplant(nodes, root, index, r);
+        } else if r >= len {
+            transplant(nodes, root, index, l);
         } else {
-            let y: usize = minimum(nodes, nodes[index].right()).unwrap(); // should never panic
-            let r: usize = nodes[index].right();
-            let l: usize = nodes[index].left();
+            let y: usize = minimum(nodes, r).unwrap(); // should never panic
             if y != r {
-                transplant(nodes, root, y, r);
+                transplant(nodes, root, y, nodes[y].right());
                 nodes[y].set_right(r);
                 nodes[r].set_parent(y);
             }
@@ -172,7 +203,10 @@ where
         }
         swap_remove(nodes, root, index)
     } else {
-        None
+        Err(Error::new(
+            ErrorKind::IndexOutOfBounds,
+            "Cannot delete a node that does not exist.",
+        ))
     }
 }
 
@@ -235,14 +269,11 @@ where
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let mut nodes: Vec<Node<usize>> = Vec::new();
 /// for n in values.iter() {
-///     insert(&mut nodes, &mut root, Node::new(*n));
+///     insert(&mut nodes, &mut root, Node::from(*n));
 /// }
 ///
-/// if let Some(i) = minimum(&nodes, root) {
-///     assert!(*nodes[i].key() == 1, "Minimum returned {} instead of 1", i);
-/// } else {
-///     panic!("Minimum returned None.");
-/// }
+/// let i: usize = minimum(&nodes, root).unwrap();
+/// assert!(*nodes[i].key() == 1, "Minimum returned {} instead of 1", i);
 /// ```
 pub fn minimum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
@@ -270,7 +301,7 @@ where
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let mut nodes: Vec<Node<usize>> = Vec::new();
 /// for n in values.iter() {
-///     insert(&mut nodes, &mut root, Node::new(*n));
+///     insert(&mut nodes, &mut root, Node::from(*n));
 /// }
 ///
 /// if let Some(i) = maximum(&nodes, root) {
@@ -307,25 +338,18 @@ where
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let mut nodes: Vec<Node<usize>> = Vec::new();
 /// for n in values.iter() {
-///     insert(&mut nodes, &mut root, Node::new(*n));
+///     insert(&mut nodes, &mut root, Node::from(*n));
 /// }
 ///
 /// assert!(values.len() == nodes.len(), "The tree does not contain the correct number of nodes.");
 ///
 /// assert!(*nodes[root].key() == 5, "Invalid tree root node");
 ///
-/// if let Some(i) = minimum(&nodes, root) {
-///     assert!(*nodes[i].key() == 1, "Minimum value is {} instead of 1", nodes[i].key());
-/// } else {
-///     panic!("Minimum() returned None");
-/// }
+/// let i = minimum(&nodes, root).unwrap();
+/// assert!(*nodes[i].key() == 1, "Minimum value is {} instead of 1", nodes[i].key());
 ///
-/// if let Some(i) = maximum(&nodes, root) {
-///     assert!(*nodes[i].key() == 9, "Maximum value is {} instead of 9", nodes[i].key());
-/// } else {
-///     panic!("Minimum() returned None");
-/// }
-///
+/// let i = maximum(&nodes, root).unwrap();
+/// assert!(*nodes[i].key() == 9, "Maximum value is {} instead of 9", nodes[i].key());
 /// ```
 pub fn insert<K, T>(
     nodes: &mut Vec<T>,
@@ -342,7 +366,7 @@ where
         *root = new_node;
     } else {
         let mut n: usize = *root;
-        let key: &K = &node.key();
+        let key: &K = node.key();
         loop {
             match key.cmp(nodes[n].key()) {
                 Ordering::Greater => {
@@ -385,16 +409,13 @@ where
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let mut nodes: Vec<Node<usize>> = Vec::new();
 /// for n in values.iter() {
-///     insert(&mut nodes, &mut root, Node::new(*n));
+///     insert(&mut nodes, &mut root, Node::from(*n));
 /// }
 ///
 /// assert!(*nodes[root].key() == 5, "Invalid root");
 ///
-/// if let Some(search_result) = search(&nodes, root, &4) {
-///     assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
-/// } else {
-///     panic!("Search failed to locate the number 4.");
-/// };
+/// let search_result = search(&nodes, root, &4).unwrap();
+/// assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
 /// ```
 pub fn search<K, T>(nodes: &[T], mut root: usize, key: &K) -> Option<usize>
 where
@@ -473,7 +494,7 @@ where
 
 pub fn inorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
-    F: Fn(&T),
+    F: Fn(&K),
     T: TreeNode<K>,
 {
     let mut prev: usize = node;
@@ -484,14 +505,14 @@ where
                     node = nodes[node].left();
                 }
             }
-            callback(&nodes[node]);
+            callback(&nodes[node].key());
             if nodes[node].right() != NIL {
                 node = nodes[node].right();
                 loop {
                     while nodes[node].left() != NIL {
                         node = nodes[node].left();
                     }
-                    callback(&nodes[node]);
+                    callback(&nodes[node].key());
                     if nodes[node].right() != NIL {
                         node = nodes[node].right();
                     } else {
@@ -507,7 +528,7 @@ where
 
 pub fn preorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
 where
-    F: Fn(&T),
+    F: Fn(&K),
     T: TreeNode<K>,
 {
     let mut prev = node;
@@ -515,23 +536,23 @@ where
         //go down the nodes
         if nodes[node].right() != prev {
             if nodes[node].left() != prev {
-                callback(&nodes[node]);
+                callback(&nodes[node].key());
                 while nodes[node].left() != NIL {
                     node = nodes[node].left();
-                    callback(&nodes[node]);
+                    callback(&nodes[node].key());
                 }
             }
             if nodes[node].right() != NIL {
                 node = nodes[node].right();
-                callback(&nodes[node]);
+                callback(&nodes[node].key());
                 loop {
                     while nodes[node].left() != NIL {
                         node = nodes[node].left();
-                        callback(&nodes[node]);
+                        callback(&nodes[node].key());
                     }
                     if nodes[node].right() != NIL {
                         node = nodes[node].right();
-                        callback(&nodes[node]);
+                        callback(&nodes[node].key());
                     } else {
                         break;
                     }
