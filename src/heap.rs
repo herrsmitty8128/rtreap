@@ -17,8 +17,8 @@
  * panics, or other unintended consequences.
 */
 
-use std::cmp::{Ord, Ordering};
 use crate::error::{Error, ErrorKind, Result};
+use std::cmp::{Ord, Ordering};
 
 /// A minimum heap with branching factor of 2.
 pub type BinaryMinHeap<T> = Heap<T, false, 2>;
@@ -97,7 +97,6 @@ impl<T, const MAX_HEAP: bool, const BRANCHES: usize> Heap<T, MAX_HEAP, BRANCHES>
 where
     T: Ord + Eq + Copy,
 {
-    
     /// Constructs a new, empty heap.
     /// The new heap will allocate memory as elements are inserted.
     pub fn new() -> Self {

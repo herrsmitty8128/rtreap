@@ -8,6 +8,6 @@
 
 pub mod bst;
 pub mod error;
+pub mod heap;
 pub mod rbtree;
 pub mod treap;
-pub mod heap;
