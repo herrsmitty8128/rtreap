@@ -7,7 +7,7 @@ use crate::bst;
 const PARENT_MASK: usize = usize::MAX >> 1;
 const COLOR_MASK: usize = 1 << ((std::mem::size_of::<usize>() * 8) - 1);
 
-pub trait Node<E>: bst::TreeNode<E>
+pub trait Node<E>: bst::Node<E>
 where
     Self: Sized,
 {
