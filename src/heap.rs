@@ -18,50 +18,7 @@
 */
 
 use std::cmp::{Ord, Ordering};
-use std::fmt::Display;
-
-/// An enum containing the types of errors that a heap might encounter.
-#[derive(Debug, Copy, Clone)]
-pub enum ErrorKind {
-    InvalidIndex,
-    EmptyHeap,
-}
-
-impl Display for ErrorKind {
-    /// Displays the text string associated with an ErrorKind.
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            ErrorKind::InvalidIndex => f.write_str("Index out of bounds."),
-            ErrorKind::EmptyHeap => f.write_str("Heap is empty."),
-        }
-    }
-}
-
-/// The error type used by a heap.
-#[derive(Debug, Copy, Clone)]
-pub struct Error {
-    kind: ErrorKind,
-    message: &'static str,
-}
-
-impl Display for Error {
-    /// Displays both the text string associated with an ErrorKind and the error's message string.
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.kind, self.message))
-    }
-}
-
-impl Error {
-    /// Creates and returns a new Error object containing the ErrorKind and message string.
-    pub fn new(kind: ErrorKind, message: &'static str) -> Self {
-        Error { kind, message }
-    }
-}
-
-impl std::error::Error for Error {}
-
-/// A specialized result type to make error handling simpler.
-pub type Result<T> = std::result::Result<T, Error>;
+use crate::error::{Error, ErrorKind, Result};
 
 /// A minimum heap with branching factor of 2.
 pub type BinaryMinHeap<T> = Heap<T, false, 2>;
@@ -309,7 +266,7 @@ where
             ))
         } else if index >= self.heap.len() {
             Err(Error::new(
-                ErrorKind::InvalidIndex,
+                ErrorKind::IndexOutOfBounds,
                 "Index is beyond the end of the heap.",
             ))
         } else {
@@ -384,7 +341,7 @@ where
             ))
         } else if index >= self.heap.len() {
             Err(Error::new(
-                ErrorKind::InvalidIndex,
+                ErrorKind::IndexOutOfBounds,
                 "Index is beyond the end of the heap.",
             ))
         } else {

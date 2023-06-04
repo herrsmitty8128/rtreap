@@ -7,6 +7,7 @@ pub enum ErrorKind {
     RotationError,
     IndexOutOfBounds,
     InsertionFailed,
+    EmptyHeap,
 }
 
 impl std::fmt::Display for ErrorKind {
@@ -15,6 +16,7 @@ impl std::fmt::Display for ErrorKind {
             ErrorKind::InsertionFailed => f.write_str("Insertion failed."),
             ErrorKind::IndexOutOfBounds => f.write_str("Index out of bounds"),
             ErrorKind::RotationError => f.write_str("Rotation error"),
+            ErrorKind::EmptyHeap => f.write_str("Heap is empty."),
         }
     }
 }
