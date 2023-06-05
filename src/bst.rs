@@ -21,6 +21,20 @@ where
     fn key(&self) -> &K;
 }
 
+pub trait Tree<K, T>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    fn insert(&mut self, key: K) -> std::result::Result<usize, usize>;
+    fn remove(&mut self, key: K) -> Option<K>;
+    fn search(&self, key: &K) -> Option<usize>;
+    fn successor(&self, index: usize) -> Option<usize>;
+    fn predecessor(&self, index: usize) -> Option<usize>;
+    fn minimum(&self, index: usize) -> Option<usize>;
+    fn maximum(&self, index: usize) -> Option<usize>;
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct TreeNode<K>
 where
@@ -79,6 +93,19 @@ where
     }
 }
 
+/// Constructs a binary search tree from slice and returns a tuple containing
+/// a vector of tree nodes and the index of the root node.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{build, Node, TreeNode};
+///
+/// let values: [usize; 7] = [5, 7, 3, 4, 1, 9, 2];
+/// let (nodes, root) = build::<usize, TreeNode<usize>>(&values);
+/// assert!(nodes.len() == values.len(), "Number of nodes is incorrect.");
+/// assert!(*nodes[root].key() == 5, "Root is {} instead of 4.", nodes[root].key());
+/// ```
 pub fn build<K, T>(s: &[K]) -> (Vec<T>, usize)
 where
     K: Ord + Copy,
@@ -92,6 +119,47 @@ where
     (nodes, root)
 }
 
+/// Removes the node located at `index` from `nodes` and returns it.
+/// The removed node is replaced by the last node in the `nodes`.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{TreeNode, Node, insert, swap_remove, build};
+///
+/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// let index: usize = 3;
+/// let last: usize = nodes.len() - 1;
+/// let node: TreeNode<usize> = nodes[last];
+///
+/// let is_left_child = if node.parent() < nodes.len() {
+///     if nodes[node.parent()].right() == last {
+///         false
+///     } else if nodes[node.parent()].left() == last {
+///         true
+///     } else {
+///         panic!("Node at index is not a child of its parent.")
+///     }
+/// } else {
+///     panic!("Node at index has not parent. Pick a different node to test.")
+/// };
+///
+/// swap_remove(&mut nodes, &mut root, index);
+///
+/// assert!(node.key() == nodes[index].key(), "Keys are not the same.");
+/// assert!(node.parent() == nodes[index].parent(), "Parent is not the same.");
+/// assert!(node.left() == nodes[index].left(), "Left child not the same.");
+/// assert!(node.right() == nodes[index].right(), "Right child not the same.");
+///
+/// if is_left_child {
+///     assert!(nodes[node.parent()].left() == index, "Parent node points to the wrong child.");
+/// } else {
+///     assert!(nodes[node.parent()].right() == index, "Parent node points to the wrong child.");
+/// }
+///
+/// ```
 pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
 where
     T: Node<K>,
@@ -129,7 +197,7 @@ where
     }
 }
 
-/// Removes the nodes at index `dst` from the tree by replacing it with node at index `src`.
+/// Removes the node at index `dst` from `nodes` by replacing it with node at index `src`.
 pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
 where
     K: Ord + Copy,
@@ -161,7 +229,7 @@ where
 /// ```
 /// use rtreap::bst::{TreeNode, Node, insert, NIL, remove, build};
 ///
-/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
 /// for i in (0..nodes.len()).rev() {
@@ -256,7 +324,8 @@ where
     None
 }
 
-/// Returns the index of smallest value in the tree starting with the node at `index` or `None` if the tree is empty.
+/// Returns the index of smallest value in the tree starting with the
+/// node at `index` or `None` if the tree is empty.
 ///
 /// ```
 /// use rtreap::bst::{minimum, insert, Node, TreeNode, NIL, build};
@@ -284,7 +353,8 @@ where
     None
 }
 
-/// Returns the index of largest value in the tree starting with the node at `index` or `None` if the tree is empty.
+/// Returns the index of largest value in the tree starting with the
+/// node at `index` or `None` if the tree is empty.
 ///
 /// ```
 /// use rtreap::bst::{maximum, insert, Node, TreeNode, NIL, build};
@@ -412,18 +482,18 @@ where
     None
 }
 
-pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, node: usize)
+pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
 where
     T: Node<K>,
 {
     let treap_size: usize = nodes.len();
-    if node < treap_size {
-        let l: usize = nodes[node].left();
+    if index < treap_size {
+        let l: usize = nodes[index].left();
         if l < treap_size {
-            let p: usize = nodes[node].parent();
+            let p: usize = nodes[index].parent();
             nodes[l].set_parent(p);
             if p < treap_size {
-                if node == nodes[p].left() {
+                if index == nodes[p].left() {
                     nodes[p].set_left(l);
                 } else {
                     nodes[p].set_right(l);
@@ -431,29 +501,29 @@ where
             } else {
                 *root = l;
             }
-            nodes[node].set_parent(l);
+            nodes[index].set_parent(l);
             let r: usize = nodes[l].right();
-            nodes[node].set_left(r);
+            nodes[index].set_left(r);
             if r < treap_size {
-                nodes[r].set_parent(node);
+                nodes[r].set_parent(index);
             }
-            nodes[l].set_right(node);
+            nodes[l].set_right(index);
         }
     }
 }
 
-pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, node: usize)
+pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
 where
     T: Node<K>,
 {
     let treap_size: usize = nodes.len();
-    if node < treap_size {
-        let r: usize = nodes[node].right();
+    if index < treap_size {
+        let r: usize = nodes[index].right();
         if r < treap_size {
-            let p: usize = nodes[node].parent();
+            let p: usize = nodes[index].parent();
             nodes[r].set_parent(p);
             if p < treap_size {
-                if node == nodes[p].left() {
+                if index == nodes[p].left() {
                     nodes[p].set_left(r);
                 } else {
                     nodes[p].set_right(r);
@@ -461,78 +531,78 @@ where
             } else {
                 *root = r;
             }
-            nodes[node].set_parent(r);
+            nodes[index].set_parent(r);
             let l: usize = nodes[r].left();
-            nodes[node].set_right(l);
+            nodes[index].set_right(l);
             if l < treap_size {
-                nodes[l].set_parent(node);
+                nodes[l].set_parent(index);
             }
-            nodes[r].set_left(node);
+            nodes[r].set_left(index);
         }
     }
 }
 
-pub fn inorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
+pub fn inorder<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
     F: Fn(&K),
     T: Node<K>,
 {
-    let mut prev: usize = node;
-    while node < nodes.len() {
-        if nodes[node].right() != prev {
-            if nodes[node].left() != prev {
-                while nodes[node].left() != NIL {
-                    node = nodes[node].left();
+    let mut prev: usize = index;
+    while index < nodes.len() {
+        if nodes[index].right() != prev {
+            if nodes[index].left() != prev {
+                while nodes[index].left() != NIL {
+                    index = nodes[index].left();
                 }
             }
-            callback(&nodes[node].key());
-            if nodes[node].right() != NIL {
-                node = nodes[node].right();
+            callback(nodes[index].key());
+            if nodes[index].right() != NIL {
+                index = nodes[index].right();
                 loop {
-                    while nodes[node].left() != NIL {
-                        node = nodes[node].left();
+                    while nodes[index].left() != NIL {
+                        index = nodes[index].left();
                     }
-                    callback(&nodes[node].key());
-                    if nodes[node].right() != NIL {
-                        node = nodes[node].right();
+                    callback(nodes[index].key());
+                    if nodes[index].right() != NIL {
+                        index = nodes[index].right();
                     } else {
                         break;
                     }
                 }
             }
         }
-        prev = node;
-        node = nodes[node].parent();
+        prev = index;
+        index = nodes[index].parent();
     }
 }
 
-pub fn preorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
+pub fn preorder<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
     F: Fn(&K),
     T: Node<K>,
 {
-    let mut prev = node;
-    while node != NIL {
+    let mut prev = index;
+    while index != NIL {
         //go down the nodes
-        if nodes[node].right() != prev {
-            if nodes[node].left() != prev {
-                callback(&nodes[node].key());
-                while nodes[node].left() != NIL {
-                    node = nodes[node].left();
-                    callback(&nodes[node].key());
+        if nodes[index].right() != prev {
+            if nodes[index].left() != prev {
+                callback(nodes[index].key());
+                while nodes[index].left() != NIL {
+                    index = nodes[index].left();
+                    callback(nodes[index].key());
                 }
             }
-            if nodes[node].right() != NIL {
-                node = nodes[node].right();
-                callback(&nodes[node].key());
+            if nodes[index].right() != NIL {
+                index = nodes[index].right();
+                callback(nodes[index].key());
                 loop {
-                    while nodes[node].left() != NIL {
-                        node = nodes[node].left();
-                        callback(&nodes[node].key());
+                    while nodes[index].left() != NIL {
+                        index = nodes[index].left();
+                        callback(nodes[index].key());
                     }
-                    if nodes[node].right() != NIL {
-                        node = nodes[node].right();
-                        callback(&nodes[node].key());
+                    if nodes[index].right() != NIL {
+                        index = nodes[index].right();
+                        callback(nodes[index].key());
                     } else {
                         break;
                     }
@@ -540,40 +610,40 @@ where
             }
         }
         //go up the nodes
-        prev = node;
-        node = nodes[node].parent();
+        prev = index;
+        index = nodes[index].parent();
     }
 }
 
-pub fn postorder<K, F, T>(nodes: &[T], mut node: usize, callback: F)
+pub fn postorder<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
-    F: Fn(&T),
+    F: Fn(&K),
     T: Node<K>,
 {
-    let mut prev = node;
-    while node != NIL {
-        if nodes[node].right() != prev {
-            if nodes[node].left() != prev {
-                while nodes[node].left() != NIL {
-                    node = nodes[node].left()
+    let mut prev = index;
+    while index != NIL {
+        if nodes[index].right() != prev {
+            if nodes[index].left() != prev {
+                while nodes[index].left() != NIL {
+                    index = nodes[index].left()
                 }
             }
-            if nodes[node].right() != NIL {
-                node = nodes[node].right();
+            if nodes[index].right() != NIL {
+                index = nodes[index].right();
                 loop {
-                    while nodes[node].left() != NIL {
-                        node = nodes[node].left()
+                    while nodes[index].left() != NIL {
+                        index = nodes[index].left()
                     }
-                    if nodes[node].right() != NIL {
-                        node = nodes[node].right();
+                    if nodes[index].right() != NIL {
+                        index = nodes[index].right();
                     } else {
                         break;
                     }
                 }
             }
         }
-        callback(&nodes[node]);
-        prev = node;
-        node = nodes[node].parent();
+        callback(nodes[index].key());
+        prev = index;
+        index = nodes[index].parent();
     }
 }

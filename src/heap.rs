@@ -57,6 +57,15 @@ where
     sort_order: Ordering,
 }
 
+impl<T, const MAX_HEAP: bool, const BRANCHES: usize> Default for Heap<T, MAX_HEAP, BRANCHES>
+where
+    T: Ord + Eq + Copy,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T, const MAX_HEAP: bool, const BRANCHES: usize> From<&[T]> for Heap<T, MAX_HEAP, BRANCHES>
 where
     T: Ord + Eq + Copy,

@@ -21,7 +21,7 @@ where
     fn is_leaf(&self) -> bool;
 }
 
-#[allow(unused)]
+#[allow(unused_variables)]
 pub trait Treap<K, P, const MAX_HEAP: bool> {
     fn insert(&mut self, key: K, priority: P) -> Result<()>;
     fn remove(&mut self, key: &K) -> Option<(K, P)>;
@@ -33,11 +33,7 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     fn search(&self, key: &K) -> Option<&(K, P)>;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool {
-        if self.len() == 0 {
-            true
-        } else {
-            false
-        }
+        self.len() == 0
     }
 }
 
@@ -50,7 +46,7 @@ where
     while nodes[index].parent() < nodes.len()
         && nodes[index]
             .priority()
-            .cmp(&nodes[nodes[index].parent()].priority())
+            .cmp(nodes[nodes[index].parent()].priority())
             == sort_order
     {
         let p: usize = nodes[index].parent();
@@ -79,7 +75,7 @@ where
     Ok(())
 }
 
-pub fn push_down<K, P, T>(nodes: &mut Vec<T>, root: &mut usize, sort_order: Ordering, index: usize)
+pub fn push_down<K, P, T>(nodes: &mut [T], root: &mut usize, sort_order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
@@ -90,7 +86,7 @@ where
             && (nodes[index].right() == bst::NIL
                 || nodes[nodes[index].left()]
                     .priority()
-                    .cmp(&nodes[nodes[index].right()].priority())
+                    .cmp(nodes[nodes[index].right()].priority())
                     == sort_order)
         {
             bst::rotate_right(nodes, root, index);
@@ -305,7 +301,7 @@ pub mod basic {
                 for i in 0..self.treap.len() {
                     if self.treap[i]
                         .priority()
-                        .cmp(&self.treap[self.root].priority())
+                        .cmp(self.treap[self.root].priority())
                         == self.sort_order
                     {
                         return false;
