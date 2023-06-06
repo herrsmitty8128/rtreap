@@ -200,21 +200,21 @@ where
 
 /// Removes the node at index `dst` from the tree by replacing it with node at index `src`.
 /// It does not remove the node from the vector `nodes`.
-/// 
+///
 /// ## Example:
-/// 
+///
 /// ```
 /// use rtreap::bst::{Node, TreeNode, NIL, transplant, build, swap_remove};
-/// 
+///
 /// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
-/// 
+///
 /// // remove node at index 2 from the tree and replace it with the node at index 5
 /// transplant(&mut nodes, &mut root, 2, 5);
-/// 
+///
 /// assert!(nodes[2].parent() == nodes[5].parent());
 /// assert!(nodes[nodes[5].parent()].left() == 5);
-/// 
+///
 /// // remove the node at index 2 from the vector
 /// swap_remove(&mut nodes, &mut root, 2);
 /// ```
@@ -295,9 +295,9 @@ where
 }
 
 /// Returns the next larger node after the node at `index` or `None` if one does not exist.
-/// 
+///
 /// ## Example:
-/// 
+///
 /// ```
 /// use rtreap::bst::{TreeNode, Node, insert, NIL, successor, minimum, build};
 ///
@@ -335,9 +335,9 @@ where
 }
 
 /// Returns the previous smaller node before the node at `index` or `None` if one does not exist.
-/// /// 
+/// ///
 /// ## Example:
-/// 
+///
 /// ```
 /// use rtreap::bst::{TreeNode, Node, insert, NIL, predecessor, maximum, build};
 ///
@@ -592,7 +592,7 @@ where
     }
 }
 
-pub fn inorder<K, F, T>(nodes: &[T], mut index: usize, callback: F)
+pub fn in_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
     F: Fn(&K),
     T: Node<K>,
@@ -626,7 +626,7 @@ where
     }
 }
 
-pub fn preorder<K, F, T>(nodes: &[T], mut index: usize, callback: F)
+pub fn pre_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
     F: Fn(&K),
     T: Node<K>,
@@ -665,7 +665,7 @@ where
     }
 }
 
-pub fn postorder<K, F, T>(nodes: &[T], mut index: usize, callback: F)
+pub fn post_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
     F: Fn(&K),
     T: Node<K>,

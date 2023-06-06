@@ -315,7 +315,7 @@ pub mod basic {
         where
             F: Fn(&K),
         {
-            bst::inorder(&self.treap, n, callback);
+            bst::in_order(&self.treap, n, callback);
         }
     }
 
