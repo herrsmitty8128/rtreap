@@ -26,13 +26,13 @@ where
     K: Ord + Copy,
     T: Node<K>,
 {
-    fn insert(&mut self, key: K) -> std::result::Result<usize, usize>;
-    fn remove(&mut self, key: K) -> Option<K>;
-    fn search(&self, key: &K) -> Option<usize>;
-    fn successor(&self, index: usize) -> Option<usize>;
-    fn predecessor(&self, index: usize) -> Option<usize>;
-    fn minimum(&self, index: usize) -> Option<usize>;
-    fn maximum(&self, index: usize) -> Option<usize>;
+    fn insert(&mut self, key: K) -> Option<K>;
+    fn remove(&mut self, key: &K) -> Option<K>;
+    fn search(&self, key: &K) -> Option<&K>;
+    fn successor(&self, key: &K) -> Option<&K>;
+    fn predecessor(&self, key: &K) -> Option<&K>;
+    fn minimum(&self) -> Option<&K>;
+    fn maximum(&self) -> Option<&K>;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -119,8 +119,9 @@ where
     (nodes, root)
 }
 
-/// Removes the node located at `index` from `nodes` and returns it.
-/// The removed node is replaced by the last node in the `nodes`.
+/// Removes the node located at `index` from the vector `nodes` and returns it.
+/// The removed node is replaced by the last node in the vector.
+/// It does not remove the node from the tree.
 ///
 /// ## Example:
 ///
@@ -197,7 +198,26 @@ where
     }
 }
 
-/// Removes the node at index `dst` from `nodes` by replacing it with node at index `src`.
+/// Removes the node at index `dst` from the tree by replacing it with node at index `src`.
+/// It does not remove the node from the vector `nodes`.
+/// 
+/// ## Example:
+/// 
+/// ```
+/// use rtreap::bst::{Node, TreeNode, NIL, transplant, build, swap_remove};
+/// 
+/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+/// 
+/// // remove node at index 2 from the tree and replace it with the node at index 5
+/// transplant(&mut nodes, &mut root, 2, 5);
+/// 
+/// assert!(nodes[2].parent() == nodes[5].parent());
+/// assert!(nodes[nodes[5].parent()].left() == 5);
+/// 
+/// // remove the node at index 2 from the vector
+/// swap_remove(&mut nodes, &mut root, 2);
+/// ```
 pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
 where
     K: Ord + Copy,
@@ -274,6 +294,21 @@ where
     }
 }
 
+/// Returns the next larger node after the node at `index` or `None` if one does not exist.
+/// 
+/// ## Example:
+/// 
+/// ```
+/// use rtreap::bst::{TreeNode, Node, insert, NIL, successor, minimum, build};
+///
+/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+/// let mut i: usize = minimum(&nodes, root).unwrap();
+/// while let Some(next) = successor(&nodes, i) {
+///     assert!(*nodes[next].key() == *nodes[i].key() + 1);
+///     i = next;
+/// }
+/// ```
 pub fn successor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
@@ -299,6 +334,21 @@ where
     None
 }
 
+/// Returns the previous smaller node before the node at `index` or `None` if one does not exist.
+/// /// 
+/// ## Example:
+/// 
+/// ```
+/// use rtreap::bst::{TreeNode, Node, insert, NIL, predecessor, maximum, build};
+///
+/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+/// let mut i: usize = maximum(&nodes, root).unwrap();
+/// while let Some(next) = predecessor(&nodes, i) {
+///     assert!(*nodes[next].key() == *nodes[i].key() - 1);
+///     i = next;
+/// }
+/// ```
 pub fn predecessor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
