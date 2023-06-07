@@ -218,7 +218,7 @@ where
 /// // remove the node at index 2 from the vector
 /// swap_remove(&mut nodes, &mut root, 2);
 /// ```
-pub fn transplant<K, T>(nodes: &mut Vec<T>, root: &mut usize, dst: usize, src: usize)
+pub fn transplant<K, T>(nodes: &mut [T], root: &mut usize, dst: usize, src: usize)
 where
     K: Ord + Copy,
     T: Node<K>,
@@ -277,7 +277,8 @@ where
         } else {
             let y: usize = minimum(nodes, r).unwrap(); // should never panic
             if y != r {
-                transplant(nodes, root, y, nodes[y].right());
+                let yr = nodes[y].right();
+                transplant(nodes, root, y, yr);
                 nodes[y].set_right(r);
                 nodes[r].set_parent(y);
             }
@@ -309,7 +310,7 @@ where
 ///     i = next;
 /// }
 /// ```
-pub fn successor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+pub fn successor<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     T: Node<K>,
@@ -349,7 +350,7 @@ where
 ///     i = next;
 /// }
 /// ```
-pub fn predecessor<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+pub fn predecessor<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     T: Node<K>,
@@ -386,7 +387,7 @@ where
 /// let i: usize = minimum(&nodes, root).unwrap();
 /// assert!(*nodes[i].key() == 1, "Minimum returned {} instead of 1", i);
 /// ```
-pub fn minimum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+pub fn minimum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     T: Node<K>,
@@ -418,7 +419,7 @@ where
 ///     panic!("Maximum returned None.");
 /// }
 /// ```
-pub fn maximum<K, T>(nodes: &Vec<T>, mut index: usize) -> Option<usize>
+pub fn maximum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     T: Node<K>,
@@ -532,17 +533,36 @@ where
     None
 }
 
+/// Rotates the node at `index` to the right.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{rotate_right, insert, Node, TreeNode, NIL, build};
+///
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// let node1: usize = 3;
+/// let node2: usize = nodes[node1].left();
+///
+/// assert!(node2 < nodes.len());
+///
+/// rotate_right(&mut nodes, &mut root, node1);
+///
+/// assert!(nodes[node2].right() == node1);
+/// ```
 pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
 where
     T: Node<K>,
 {
-    let treap_size: usize = nodes.len();
-    if index < treap_size {
+    let len: usize = nodes.len();
+    if index < len {
         let l: usize = nodes[index].left();
-        if l < treap_size {
+        if l < len {
             let p: usize = nodes[index].parent();
             nodes[l].set_parent(p);
-            if p < treap_size {
+            if p < len {
                 if index == nodes[p].left() {
                     nodes[p].set_left(l);
                 } else {
@@ -554,7 +574,7 @@ where
             nodes[index].set_parent(l);
             let r: usize = nodes[l].right();
             nodes[index].set_left(r);
-            if r < treap_size {
+            if r < len {
                 nodes[r].set_parent(index);
             }
             nodes[l].set_right(index);
@@ -562,17 +582,36 @@ where
     }
 }
 
+/// Rotates the node at `index` to the left.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{rotate_left, insert, Node, TreeNode, NIL, build};
+///
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// let node1: usize = 4;
+/// let node2: usize = nodes[node1].right();
+///
+/// assert!(node2 < nodes.len());
+///
+/// rotate_left(&mut nodes, &mut root, node1);
+///
+/// assert!(nodes[node2].left() == node1);
+/// ```
 pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
 where
     T: Node<K>,
 {
-    let treap_size: usize = nodes.len();
-    if index < treap_size {
+    let len: usize = nodes.len();
+    if index < len {
         let r: usize = nodes[index].right();
-        if r < treap_size {
+        if r < len {
             let p: usize = nodes[index].parent();
             nodes[r].set_parent(p);
-            if p < treap_size {
+            if p < len {
                 if index == nodes[p].left() {
                     nodes[p].set_left(r);
                 } else {
@@ -584,7 +623,7 @@ where
             nodes[index].set_parent(r);
             let l: usize = nodes[r].left();
             nodes[index].set_right(l);
-            if l < treap_size {
+            if l < len {
                 nodes[l].set_parent(index);
             }
             nodes[r].set_left(index);
@@ -592,6 +631,25 @@ where
     }
 }
 
+/// Performs an in order traversal on the tree, starting from the node at `index`
+/// and calling `callback` as each node is visited.
+///
+/// ## Example
+///
+/// ```
+/// use rtreap::bst::{in_order, insert, Node, TreeNode, NIL, build};
+///
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// let mut x: usize = 0;
+/// let y: &mut usize = &mut x;
+/// let mut v: Vec<usize> = Vec::new();
+///
+/// in_order(&nodes, root, |n| {
+///     assert!(*n >= *y);
+/// });
+/// ```
 pub fn in_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
 where
     F: Fn(&K),
@@ -624,6 +682,34 @@ where
         prev = index;
         index = nodes[index].parent();
     }
+}
+
+/// Performs an in order traversal on the tree, starting from the node at `index`
+/// and calling `callback` as each node is visited.
+///
+/// ## Example
+///
+/// ```
+/// use rtreap::bst::{minimum, in_order_successor, insert, Node, TreeNode, NIL, build};
+///
+/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// let mut index: usize = minimum(&nodes, root).unwrap();
+///
+/// assert!(*nodes[index].key() == 1);
+///
+/// while let Some(n) = in_order_successor(&nodes, index) {
+///     assert!(*nodes[n].key() >= *nodes[index].key());
+///     index = n;
+/// }
+/// ```
+pub fn in_order_successor<K, T>(nodes: &[T], index: usize) -> Option<usize>
+where
+    K: Ord + Copy,
+    T: Node<K>,
+{
+    successor(nodes, index)
 }
 
 pub fn pre_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
