@@ -29,8 +29,8 @@ where
     fn insert(&mut self, key: K) -> Option<K>;
     fn remove(&mut self, key: &K) -> Option<K>;
     fn search(&self, key: &K) -> Option<&K>;
-    fn successor(&self, key: &K) -> Option<&K>;
-    fn predecessor(&self, key: &K) -> Option<&K>;
+    fn in_order_next(&self, key: &K) -> Option<&K>;
+    fn in_order_prev(&self, key: &K) -> Option<&K>;
     fn minimum(&self) -> Option<&K>;
     fn maximum(&self) -> Option<&K>;
 }
@@ -293,86 +293,6 @@ where
             "Cannot delete a node that does not exist.",
         ))
     }
-}
-
-/// Returns the next larger node after the node at `index` or `None` if one does not exist.
-///
-/// ## Example:
-///
-/// ```
-/// use rtreap::bst::{TreeNode, Node, insert, NIL, successor, minimum, build};
-///
-/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
-/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
-/// let mut i: usize = minimum(&nodes, root).unwrap();
-/// while let Some(next) = successor(&nodes, i) {
-///     assert!(*nodes[next].key() == *nodes[i].key() + 1);
-///     i = next;
-/// }
-/// ```
-pub fn successor<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
-where
-    K: Ord,
-    T: Node<K>,
-{
-    let len: usize = nodes.len();
-    if index < len {
-        let r: usize = nodes[index].right();
-        if r < len {
-            return minimum(nodes, r);
-        } else {
-            let mut p: usize = nodes[index].parent();
-            while p < len {
-                if index == nodes[p].left() {
-                    return Some(p);
-                } else {
-                    index = p;
-                    p = nodes[p].parent();
-                }
-            }
-        }
-    }
-    None
-}
-
-/// Returns the previous smaller node before the node at `index` or `None` if one does not exist.
-/// ///
-/// ## Example:
-///
-/// ```
-/// use rtreap::bst::{TreeNode, Node, insert, NIL, predecessor, maximum, build};
-///
-/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
-/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
-/// let mut i: usize = maximum(&nodes, root).unwrap();
-/// while let Some(next) = predecessor(&nodes, i) {
-///     assert!(*nodes[next].key() == *nodes[i].key() - 1);
-///     i = next;
-/// }
-/// ```
-pub fn predecessor<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
-where
-    K: Ord,
-    T: Node<K>,
-{
-    let len: usize = nodes.len();
-    if index < len {
-        let l: usize = nodes[index].left();
-        if l < len {
-            return maximum(nodes, l);
-        } else {
-            let mut p: usize = nodes[index].parent();
-            while p < len {
-                if index == nodes[p].right() {
-                    return Some(p);
-                } else {
-                    index = p;
-                    p = nodes[p].parent();
-                }
-            }
-        }
-    }
-    None
 }
 
 /// Returns the index of smallest value in the tree starting with the
@@ -639,6 +559,7 @@ where
 /// use rtreap::bst::{pre_order_next, insert, Node, TreeNode, build};
 /// use rand::prelude::*;
 ///
+/// // funcion used to recursively traverse a binary search tree (for testing only)
 /// pub fn pre_order_recursive<K, T>(v: &mut Vec<usize>, nodes: &[T], index: usize)
 /// where
 ///     K: Ord,
@@ -651,56 +572,67 @@ where
 ///     }
 /// }
 ///
+/// // build a binary search tree from an array of random numbers
 /// let mut values: [usize; 100] = [0; 100];
 /// rand::thread_rng().fill(&mut values[..]);
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// // create two new vectors to hold the result of each traversal
 /// let mut v1: Vec<usize> = Vec::new();
 /// let mut v2: Vec<usize> = Vec::new();
 ///
+/// // recursively traverse all nodes in the tree and append each index to v1
 /// pre_order_recursive(&mut v1, &nodes, root);
 ///
-/// let mut curr_node = root;
-/// v2.push(curr_node);
+/// // in a pre-order traversal, each node is visited before its children.
+/// // therefore, the root node is visited first. So we get the root node,
+/// // do something with it (here, we append it to v2), then pass it to
+/// // pre_order_next()
+/// let mut prev = root;
+/// v2.push(prev);
 ///
-/// while let Some(i) = pre_order_next(&nodes, curr_node) {
-///     v2.push(i);
-///     curr_node = i;
+/// // iteratively traverse all the nodes in the tree and append each index to v2
+/// while let Some(next) = pre_order_next(&nodes, prev) {
+///     v2.push(next);
+///     prev = next;
 /// }
 ///
-/// assert!(v1 == v2, "\n{:?}\n\n{:?}\n", &v1, &v2);
+/// // verify that both methods (recursive and iterative) had the same result
+/// assert!(v1 == v2);
 /// ```
-pub fn pre_order_next<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
+pub fn pre_order_next<K, T>(nodes: &[T], mut prev: usize) -> Option<usize>
 where
     K: Ord,
     T: Node<K>,
 {
     let len: usize = nodes.len();
-    if index < len {
-        if nodes[index].left() < len {
-            return Some(nodes[index].left());
+    if prev < len {
+        if nodes[prev].left() < len {
+            return Some(nodes[prev].left());
         }
-        if nodes[index].right() < len {
-            return Some(nodes[index].right());
+        if nodes[prev].right() < len {
+            return Some(nodes[prev].right());
         }
-        while nodes[index].parent() < len {
-            let p: usize = nodes[index].parent();
-            if index == nodes[p].left() && nodes[p].right() < len {
+        while nodes[prev].parent() < len {
+            let p: usize = nodes[prev].parent();
+            if prev == nodes[p].left() && nodes[p].right() < len {
                 return Some(nodes[p].right());
             }
-            index = p;
+            prev = p;
         }
     }
     None
 }
 
 /// Returns the index of the next node in a pre-order traversal or `None` if there isn't one.
-/// ///
+///
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{post_order_next, insert, Node, TreeNode, build, NIL};
+/// use rtreap::bst::{post_order_next, Node, TreeNode, build, NIL};
 /// use rand::prelude::*;
 ///
+/// // funcion used to recursively traverse a binary search tree (for testing only)
 /// pub fn post_order_recursive<K, T>(v: &mut Vec<usize>, nodes: &[T], index: usize)
 /// where
 ///     K: Ord,
@@ -713,52 +645,159 @@ where
 ///     }
 /// }
 ///
+/// // build a binary search tree from an array of random numbers
 /// let mut values: [usize; 100] = [0; 100];
 /// rand::thread_rng().fill(&mut values[..]);
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// // create two new vectors to hold the result of each traversal
 /// let mut v1: Vec<usize> = Vec::new();
 /// let mut v2: Vec<usize> = Vec::new();
 ///
+/// // recursively traverse all nodes in the tree and append each index to v1
 /// post_order_recursive(&mut v1, &nodes, root);
 ///
-/// let mut prev_node = NIL;
+/// // in a post-order traversal, each node is visited after its children
+/// // have been visited. Therefore, there is no previous node when starting
+/// // a traversal. So we set it to NIL.
+/// let mut prev: usize = NIL;
 ///
-/// while let Some(i) = post_order_next(&nodes, root, prev_node) {
-///     v2.push(i);
-///     prev_node = i;
+/// // iteratively traverse all the nodes in the tree and append each index to v2
+/// while let Some(next) = post_order_next(&nodes, root, prev) {
+///     v2.push(next);
+///     prev = next;
 /// }
 ///
-/// assert!(v1 == v2, "\n{:?}\n\n{:?}\n", &v1, &v2);
+/// // verify that both methods (recursive and iterative) had the same result
+/// assert!(v1 == v2);
 /// ```
-pub fn post_order_next<K, T>(nodes: &[T], root: usize, mut index: usize) -> Option<usize>
+pub fn post_order_next<K, T>(nodes: &[T], root: usize, mut prev: usize) -> Option<usize>
 where
     K: Ord,
     T: Node<K>,
 {
-    if index != root {
+    if prev != root {
         let len: usize = nodes.len();
 
-        if index >= len {
-            index = root;
+        if prev >= len {
+            prev = root;
         }
 
-        let p: usize = nodes[index].parent();
+        let p: usize = nodes[prev].parent();
 
         if p < len {
-            if index == nodes[p].left() && nodes[p].right() < len {
-                index = nodes[p].right();
+            if prev == nodes[p].left() && nodes[p].right() < len {
+                prev = nodes[p].right();
             } else {
                 return Some(p);
             }
         }
         // descend the tree to the next leaf node
         loop {
-            if nodes[index].left() < len {
-                index = nodes[index].left();
-            } else if nodes[index].right() < len {
-                index = nodes[index].right();
+            if nodes[prev].left() < len {
+                prev = nodes[prev].left();
+            } else if nodes[prev].right() < len {
+                prev = nodes[prev].right();
             } else {
-                return Some(index);
+                return Some(prev);
+            }
+        }
+    }
+    None
+}
+
+/// Returns the next larger node after the node at `index` or `None` if one does not exist.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{TreeNode, Node, in_order_next, minimum, build};
+/// use rand::prelude::*;
+///
+/// // build a binary search tree from an array of random numbers
+/// let mut values: [usize; 100] = [0; 100];
+/// rand::thread_rng().fill(&mut values[..]);
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// // get the first node in the traversal
+/// let mut prev: usize = minimum(&nodes, root).unwrap();
+///
+/// // do something with prev here...
+///
+/// // traverse the rest of the nodes in the tree
+/// while let Some(next) = in_order_next(&nodes, prev) {
+///     assert!(*nodes[next].key() > *nodes[prev].key());
+///     prev = next;
+/// }
+/// ```
+pub fn in_order_next<K, T>(nodes: &[T], mut prev: usize) -> Option<usize>
+where
+    K: Ord,
+    T: Node<K>,
+{
+    let len: usize = nodes.len();
+    if prev < len {
+        let r: usize = nodes[prev].right();
+        if r < len {
+            return minimum(nodes, r);
+        } else {
+            let mut p: usize = nodes[prev].parent();
+            while p < len {
+                if prev == nodes[p].left() {
+                    return Some(p);
+                } else {
+                    prev = p;
+                    p = nodes[p].parent();
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Returns the previous smaller node before the node at `index` or `None` if one does not exist.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{TreeNode, Node, in_order_prev, maximum, build};
+/// use rand::prelude::*;
+///
+/// // build a binary search tree from an array of random numbers
+/// let mut values: [usize; 100] = [0; 100];
+/// rand::thread_rng().fill(&mut values[..]);
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+///
+/// // get the first node in the traversal
+/// let mut prev: usize = maximum(&nodes, root).unwrap();
+///
+/// // do something with prev here...
+///
+/// // traverse the rest of the nodes in the tree
+/// while let Some(next) = in_order_prev(&nodes, prev) {
+///     assert!(*nodes[next].key() <= *nodes[prev].key());
+///     prev = next;
+/// }
+/// ```
+pub fn in_order_prev<K, T>(nodes: &[T], mut prev: usize) -> Option<usize>
+where
+    K: Ord,
+    T: Node<K>,
+{
+    let len: usize = nodes.len();
+    if prev < len {
+        let l: usize = nodes[prev].left();
+        if l < len {
+            return maximum(nodes, l);
+        } else {
+            let mut p: usize = nodes[prev].parent();
+            while p < len {
+                if prev == nodes[p].right() {
+                    return Some(p);
+                } else {
+                    prev = p;
+                    p = nodes[p].parent();
+                }
             }
         }
     }
