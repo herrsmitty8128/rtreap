@@ -312,7 +312,7 @@ where
 /// ```
 pub fn successor<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
-    K: Ord + Copy,
+    K: Ord,
     T: Node<K>,
 {
     let len: usize = nodes.len();
@@ -352,7 +352,7 @@ where
 /// ```
 pub fn predecessor<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
-    K: Ord + Copy,
+    K: Ord,
     T: Node<K>,
 {
     let len: usize = nodes.len();
@@ -389,7 +389,7 @@ where
 /// ```
 pub fn minimum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
-    K: Ord + Copy,
+    K: Ord,
     T: Node<K>,
 {
     let num_nodes: usize = nodes.len();
@@ -421,7 +421,7 @@ where
 /// ```
 pub fn maximum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
-    K: Ord + Copy,
+    K: Ord,
     T: Node<K>,
 {
     let num_nodes: usize = nodes.len();
@@ -631,155 +631,136 @@ where
     }
 }
 
-/// Performs an in order traversal on the tree, starting from the node at `index`
-/// and calling `callback` as each node is visited.
+/// Returns the index of the next node in a pre-order traversal or `None` if there isn't one.
 ///
-/// ## Example
-///
-/// ```
-/// use rtreap::bst::{in_order, insert, Node, TreeNode, NIL, build};
-///
-/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
-/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
-///
-/// let mut x: usize = 0;
-/// let y: &mut usize = &mut x;
-/// let mut v: Vec<usize> = Vec::new();
-///
-/// in_order(&nodes, root, |n| {
-///     assert!(*n >= *y);
-/// });
-/// ```
-pub fn in_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
-where
-    F: Fn(&K),
-    T: Node<K>,
-{
-    let mut prev: usize = index;
-    while index < nodes.len() {
-        if nodes[index].right() != prev {
-            if nodes[index].left() != prev {
-                while nodes[index].left() != NIL {
-                    index = nodes[index].left();
-                }
-            }
-            callback(nodes[index].key());
-            if nodes[index].right() != NIL {
-                index = nodes[index].right();
-                loop {
-                    while nodes[index].left() != NIL {
-                        index = nodes[index].left();
-                    }
-                    callback(nodes[index].key());
-                    if nodes[index].right() != NIL {
-                        index = nodes[index].right();
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-        prev = index;
-        index = nodes[index].parent();
-    }
-}
-
-/// Performs an in order traversal on the tree, starting from the node at `index`
-/// and calling `callback` as each node is visited.
-///
-/// ## Example
+/// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{minimum, in_order_successor, insert, Node, TreeNode, NIL, build};
+/// use rtreap::bst::{pre_order_next, insert, Node, TreeNode, build};
+/// use rand::prelude::*;
 ///
-/// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
-/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
-///
-/// let mut index: usize = minimum(&nodes, root).unwrap();
-///
-/// assert!(*nodes[index].key() == 1);
-///
-/// while let Some(n) = in_order_successor(&nodes, index) {
-///     assert!(*nodes[n].key() >= *nodes[index].key());
-///     index = n;
+/// pub fn pre_order_recursive<K, T>(v: &mut Vec<usize>, nodes: &[T], index: usize)
+/// where
+///     K: Ord,
+///     T: Node<K>,
+/// {
+///     if index < nodes.len() {
+///         v.push(index);
+///         pre_order_recursive(v, nodes, nodes[index].left());
+///         pre_order_recursive(v, nodes, nodes[index].right());
+///     }
 /// }
+///
+/// let mut values: [usize; 100] = [0; 100];
+/// rand::thread_rng().fill(&mut values[..]);
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+/// let mut v1: Vec<usize> = Vec::new();
+/// let mut v2: Vec<usize> = Vec::new();
+///
+/// pre_order_recursive(&mut v1, &nodes, root);
+///
+/// let mut curr_node = root;
+/// v2.push(curr_node);
+///
+/// while let Some(i) = pre_order_next(&nodes, curr_node) {
+///     v2.push(i);
+///     curr_node = i;
+/// }
+///
+/// assert!(v1 == v2, "\n{:?}\n\n{:?}\n", &v1, &v2);
 /// ```
-pub fn in_order_successor<K, T>(nodes: &[T], index: usize) -> Option<usize>
+pub fn pre_order_next<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
-    K: Ord + Copy,
+    K: Ord,
     T: Node<K>,
 {
-    successor(nodes, index)
+    let len: usize = nodes.len();
+    if index < len {
+        if nodes[index].left() < len {
+            return Some(nodes[index].left());
+        }
+        if nodes[index].right() < len {
+            return Some(nodes[index].right());
+        }
+        while nodes[index].parent() < len {
+            let p: usize = nodes[index].parent();
+            if index == nodes[p].left() && nodes[p].right() < len {
+                return Some(nodes[p].right());
+            }
+            index = p;
+        }
+    }
+    None
 }
 
-pub fn pre_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
+/// Returns the index of the next node in a pre-order traversal or `None` if there isn't one.
+/// ///
+/// ## Example:
+///
+/// ```
+/// use rtreap::bst::{post_order_next, insert, Node, TreeNode, build, NIL};
+/// use rand::prelude::*;
+///
+/// pub fn post_order_recursive<K, T>(v: &mut Vec<usize>, nodes: &[T], index: usize)
+/// where
+///     K: Ord,
+///     T: Node<K>,
+/// {
+///     if index < nodes.len() {
+///         post_order_recursive(v, nodes, nodes[index].left());
+///         post_order_recursive(v, nodes, nodes[index].right());
+///         v.push(index);
+///     }
+/// }
+///
+/// let mut values: [usize; 100] = [0; 100];
+/// rand::thread_rng().fill(&mut values[..]);
+/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+/// let mut v1: Vec<usize> = Vec::new();
+/// let mut v2: Vec<usize> = Vec::new();
+///
+/// post_order_recursive(&mut v1, &nodes, root);
+///
+/// let mut prev_node = NIL;
+///
+/// while let Some(i) = post_order_next(&nodes, root, prev_node) {
+///     v2.push(i);
+///     prev_node = i;
+/// }
+///
+/// assert!(v1 == v2, "\n{:?}\n\n{:?}\n", &v1, &v2);
+/// ```
+pub fn post_order_next<K, T>(nodes: &[T], root: usize, mut index: usize) -> Option<usize>
 where
-    F: Fn(&K),
+    K: Ord,
     T: Node<K>,
 {
-    let mut prev = index;
-    while index != NIL {
-        //go down the nodes
-        if nodes[index].right() != prev {
-            if nodes[index].left() != prev {
-                callback(nodes[index].key());
-                while nodes[index].left() != NIL {
-                    index = nodes[index].left();
-                    callback(nodes[index].key());
-                }
-            }
-            if nodes[index].right() != NIL {
-                index = nodes[index].right();
-                callback(nodes[index].key());
-                loop {
-                    while nodes[index].left() != NIL {
-                        index = nodes[index].left();
-                        callback(nodes[index].key());
-                    }
-                    if nodes[index].right() != NIL {
-                        index = nodes[index].right();
-                        callback(nodes[index].key());
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-        //go up the nodes
-        prev = index;
-        index = nodes[index].parent();
-    }
-}
+    if index != root {
+        let len: usize = nodes.len();
 
-pub fn post_order<K, F, T>(nodes: &[T], mut index: usize, callback: F)
-where
-    F: Fn(&K),
-    T: Node<K>,
-{
-    let mut prev = index;
-    while index != NIL {
-        if nodes[index].right() != prev {
-            if nodes[index].left() != prev {
-                while nodes[index].left() != NIL {
-                    index = nodes[index].left()
-                }
-            }
-            if nodes[index].right() != NIL {
-                index = nodes[index].right();
-                loop {
-                    while nodes[index].left() != NIL {
-                        index = nodes[index].left()
-                    }
-                    if nodes[index].right() != NIL {
-                        index = nodes[index].right();
-                    } else {
-                        break;
-                    }
-                }
+        if index >= len {
+            index = root;
+        }
+
+        let p: usize = nodes[index].parent();
+
+        if p < len {
+            if index == nodes[p].left() && nodes[p].right() < len {
+                index = nodes[p].right();
+            } else {
+                return Some(p);
             }
         }
-        callback(nodes[index].key());
-        prev = index;
-        index = nodes[index].parent();
+        // descend the tree to the next leaf node
+        loop {
+            if nodes[index].left() < len {
+                index = nodes[index].left();
+            } else if nodes[index].right() < len {
+                index = nodes[index].right();
+            } else {
+                return Some(index);
+            }
+        }
     }
+    None
 }

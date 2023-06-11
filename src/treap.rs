@@ -311,12 +311,12 @@ pub mod basic {
             true
         }
 
-        pub fn inorder<F>(&self, n: usize, callback: F)
+        /*pub fn inorder<F>(&self, n: usize, callback: F)
         where
             F: Fn(&K),
         {
             bst::in_order(&self.treap, n, callback);
-        }
+        }*/
     }
 
     impl<K, P, const MAX_HEAP: bool> super::Treap<K, P, MAX_HEAP> for Treap<K, P, MAX_HEAP>
