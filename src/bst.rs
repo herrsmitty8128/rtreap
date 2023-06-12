@@ -2,6 +2,10 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
+/*!
+ * The `bst` module is contains a trait
+*/
+
 use crate::error::{Error, ErrorKind, Result};
 use std::cmp::Ordering;
 
@@ -21,20 +25,8 @@ where
     fn key(&self) -> &K;
 }
 
-pub trait Tree<K, T>
-where
-    K: Ord + Copy,
-    T: Node<K>,
-{
-    fn insert(&mut self, key: K) -> Option<K>;
-    fn remove(&mut self, key: &K) -> Option<K>;
-    fn search(&self, key: &K) -> Option<&K>;
-    fn in_order_next(&self, key: &K) -> Option<&K>;
-    fn in_order_prev(&self, key: &K) -> Option<&K>;
-    fn minimum(&self) -> Option<&K>;
-    fn maximum(&self) -> Option<&K>;
-}
-
+/// An implementation of a general purpose binary tree node that implements the
+/// `Node` trait and can be used with the functions contained in the `bst` module.
 #[derive(Debug, Clone, Copy)]
 pub struct TreeNode<K>
 where
@@ -93,8 +85,9 @@ where
     }
 }
 
-/// Constructs a binary search tree from slice and returns a tuple containing
-/// a vector of tree nodes and the index of the root node.
+/// Constructs a binary search tree from a slice of objects that implement the
+/// `Ord` and `Copy` traits and returns a tuple containing a vector of tree
+/// nodes and the index of the root node.
 ///
 /// ## Example:
 ///
@@ -126,7 +119,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, insert, swap_remove, build};
+/// use rtreap::bst::{TreeNode, Node, swap_remove, build};
 ///
 /// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -204,7 +197,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{Node, TreeNode, NIL, transplant, build, swap_remove};
+/// use rtreap::bst::{Node, TreeNode, transplant, build, swap_remove};
 ///
 /// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -241,13 +234,13 @@ where
     }
 }
 
-/// Removes the node located at `index` from the tree and returns its key.
-/// Returns Err(Error) if `index` is out of bounds.
+/// Removes the node located at `index` from the tree and the vector `nodes`
+/// and returns its key. Returns Err(Error) if `index` is out of bounds.
 ///
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, insert, NIL, remove, build};
+/// use rtreap::bst::{TreeNode, Node, NIL, remove, build};
 ///
 /// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -295,11 +288,11 @@ where
     }
 }
 
-/// Returns the index of smallest value in the tree starting with the
+/// Returns the index of the node with the smallest value in the tree starting with the
 /// node at `index` or `None` if the tree is empty.
 ///
 /// ```
-/// use rtreap::bst::{minimum, insert, Node, TreeNode, NIL, build};
+/// use rtreap::bst::{minimum, Node, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -324,11 +317,11 @@ where
     None
 }
 
-/// Returns the index of largest value in the tree starting with the
+/// Returns the index of the node with the largest value in the tree starting with the
 /// node at `index` or `None` if the tree is empty.
 ///
 /// ```
-/// use rtreap::bst::{maximum, insert, Node, TreeNode, NIL, build};
+/// use rtreap::bst::{maximum, Node, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -356,12 +349,14 @@ where
     None
 }
 
-/// Inserts a node into the tree.
+/// Inserts `node` into the tree and returns `Some(usize)` containing the index of the inserted node.
+/// If the key of the new node already exists in the tree, then it will return `Err(usize)` containing
+/// the index of the already existing node with the same key without replacing it.
 ///
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{minimum, maximum, insert, TreeNode, Node, NIL, build};
+/// use rtreap::bst::{minimum, maximum, TreeNode, Node, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -423,12 +418,12 @@ where
     Ok(new_node)
 }
 
-/// Searches a vector of nodes, sorted as a red-black tree, for `key` starting from `root`.
+/// Searches a vector of nodes for `key` starting from `root`.
 ///
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{search, insert, Node, TreeNode, NIL, build};
+/// use rtreap::bst::{search, Node, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -458,7 +453,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{rotate_right, insert, Node, TreeNode, NIL, build};
+/// use rtreap::bst::{rotate_right, Node, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -507,7 +502,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{rotate_left, insert, Node, TreeNode, NIL, build};
+/// use rtreap::bst::{rotate_left, Node, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -556,7 +551,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{pre_order_next, insert, Node, TreeNode, build};
+/// use rtreap::bst::{pre_order_next, Node, TreeNode, build};
 /// use rand::prelude::*;
 ///
 /// // funcion used to recursively traverse a binary search tree (for testing only)
@@ -624,7 +619,7 @@ where
     None
 }
 
-/// Returns the index of the next node in a pre-order traversal or `None` if there isn't one.
+/// Returns the index of the next node in a post-order traversal or `None` if there isn't one.
 ///
 /// ## Example:
 ///
@@ -678,13 +673,10 @@ where
 {
     if prev != root {
         let len: usize = nodes.len();
-
         if prev >= len {
             prev = root;
         }
-
         let p: usize = nodes[prev].parent();
-
         if p < len {
             if prev == nodes[p].left() && nodes[p].right() < len {
                 prev = nodes[p].right();
@@ -706,7 +698,7 @@ where
     None
 }
 
-/// Returns the next larger node after the node at `index` or `None` if one does not exist.
+/// Returns the index of the next node in a pre-order traversal or `None` if one does not exist.
 ///
 /// ## Example:
 ///
@@ -719,7 +711,7 @@ where
 /// rand::thread_rng().fill(&mut values[..]);
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
-/// // get the first node in the traversal
+/// // get the first node in the traversal by calling minimum()
 /// let mut prev: usize = minimum(&nodes, root).unwrap();
 ///
 /// // do something with prev here...
@@ -755,7 +747,7 @@ where
     None
 }
 
-/// Returns the previous smaller node before the node at `index` or `None` if one does not exist.
+/// Returns the index of the previous node in a pre-order traversal or `None` if one does not exist.
 ///
 /// ## Example:
 ///
@@ -768,7 +760,7 @@ where
 /// rand::thread_rng().fill(&mut values[..]);
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
-/// // get the first node in the traversal
+/// // get the first node in the traversal by calling maximum()
 /// let mut prev: usize = maximum(&nodes, root).unwrap();
 ///
 /// // do something with prev here...
