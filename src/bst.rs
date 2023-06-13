@@ -3,7 +3,40 @@
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
 /*!
- * The `bst` module is contains a trait
+ * This module contains a collection of functions designed to work with the `Node`
+ * trait to perform operations on a binary search tree ("bst"). Supported operations include:
+ * 
+ * - build (construct a new bst from a slice of keys)
+ * - insert
+ * - remove
+ * - search
+ * - minimum
+ * - maximum
+ * - traversal (pre, post, and in-order)
+ * - rotation (left and right)
+ * - transplant (replace a node with another node in the tree)
+ * 
+ * Binary search trees are rarely used in most applications. Instead, the operations
+ * on a bst often form the basis for operations on other types of binary trees, such
+ * as a red-black tree or a treap. Therefore, this module only contains the traits,
+ * structs, and functions necessary to operate on a bst, but does not contain an
+ * implementation of a bst struct.
+ * 
+ * Memory allocations are designed to use a linear model, where nodes are stored
+ * consecutively in an array or vector, rather than allocating memory for each
+ * node separately on the heap. This has the advantage of reducing the number of
+ * allocations at cost of possibly using more memory.
+ * 
+ * Instead of pointers or references, usize indexes are used to indicate the location
+ * of a node in the array/vector. Therefore, nodes contain the usize index of both
+ * children and parent nodes. An invalid index (that is out of bounds) is treated as
+ * a sentinal/terminal value by all functions. The [NIL] constant is provided in this
+ * module as a convenient way to help manage this. Keep in mind that you are responsible
+ * for keeping track of the index of the root node in the tree. 
+ * 
+ * Since binary search trees are not self-balancing, all functions are iterative to
+ * avoid any risk of stack overflow that can sometimes occur with recursive functions
+ * on unbalanced trees.
 */
 
 use crate::error::{Error, ErrorKind, Result};
@@ -25,8 +58,8 @@ where
     fn key(&self) -> &K;
 }
 
-/// An implementation of a general purpose binary tree node that implements the
-/// `Node` trait and can be used with the functions contained in the `bst` module.
+/// A general purpose binary tree node that implements the `Node` trait 
+/// and can be used with the functions contained in the `bst` module.
 #[derive(Debug, Clone, Copy)]
 pub struct TreeNode<K>
 where
@@ -158,24 +191,24 @@ pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> 
 where
     T: Node<K>,
 {
-    let treap_size: usize = nodes.len();
-    if index < treap_size {
-        let n: usize = treap_size - 1; // get the index of the last node
+    let len: usize = nodes.len();
+    if index < len {
+        let n: usize = len - 1; // get the index of the last node
         if n != index {
             let p: usize = nodes[n].parent();
             let l: usize = nodes[n].left();
             let r: usize = nodes[n].right();
-            if p < treap_size {
+            if p < len {
                 if nodes[p].left() == n {
                     nodes[p].set_left(index);
                 } else {
                     nodes[p].set_right(index);
                 }
             }
-            if l < treap_size {
+            if l < len {
                 nodes[l].set_parent(index);
             }
-            if r < treap_size {
+            if r < len {
                 nodes[r].set_parent(index);
             }
             if n == *root {
@@ -234,7 +267,7 @@ where
     }
 }
 
-/// Removes the node located at `index` from the tree and the vector `nodes`
+/// Removes the node located at `index` from both the tree and the vector `nodes`
 /// and returns its key. Returns Err(Error) if `index` is out of bounds.
 ///
 /// ## Example:
@@ -288,7 +321,7 @@ where
     }
 }
 
-/// Returns the index of the node with the smallest value in the tree starting with the
+/// Returns the index of the node with the smallest key in the tree starting with the
 /// node at `index` or `None` if the tree is empty.
 ///
 /// ```
@@ -317,7 +350,7 @@ where
     None
 }
 
-/// Returns the index of the node with the largest value in the tree starting with the
+/// Returns the index of the node with the largest key in the tree starting with the
 /// node at `index` or `None` if the tree is empty.
 ///
 /// ```
@@ -418,7 +451,8 @@ where
     Ok(new_node)
 }
 
-/// Searches a vector of nodes for `key` starting from `root`.
+/// Searches for the nodes containing `key` starting from `root`.
+/// Returns the index of the node or `None` if not found.
 ///
 /// ## Example:
 ///

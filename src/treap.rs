@@ -62,14 +62,14 @@ pub fn insert<K, P, T>(
     nodes: &mut Vec<T>,
     root: &mut usize,
     sort_order: Ordering,
-    entry: T,
+    node: T,
 ) -> Result<()>
 where
     K: Ord + Copy,
     P: Ord + Copy,
     T: Node<K, P>,
 {
-    let index: usize = bst::insert(nodes, root, entry)
+    let index: usize = bst::insert(nodes, root, node)
         .map_err(|_| Error::new(ErrorKind::InsertionFailed, "Key already exists."))?;
     bubble_up(nodes, root, sort_order, index);
     Ok(())
