@@ -3,9 +3,9 @@
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
 /*!
- * This module contains a collection of functions designed to work with the `Node`
- * trait to perform operations on a binary search tree ("bst"). Supported operations include:
- * 
+ * This module contains a `Node` trait and a collection of functions designed to
+ * perform operations on a binary search tree ("bst"). Supported operations include:
+ *
  * - build (construct a new bst from a slice of keys)
  * - insert
  * - remove
@@ -15,27 +15,27 @@
  * - traversal (pre, post, and in-order)
  * - rotation (left and right)
  * - transplant (replace a node with another node in the tree)
- * 
+ *
  * Binary search trees are rarely used in most applications. Instead, the operations
  * on a bst often form the basis for operations on other types of binary trees, such
  * as a red-black tree or a treap. Therefore, this module only contains the traits,
  * structs, and functions necessary to operate on a bst, but does not contain an
  * implementation of a bst struct.
- * 
+ *
  * Memory allocations are designed to use a linear model, where nodes are stored
  * consecutively in an array or vector, rather than allocating memory for each
  * node separately on the heap. This has the advantage of reducing the number of
- * allocations at cost of possibly using more memory.
- * 
+ * allocations at a cost of possibly using more memory.
+ *
  * Instead of pointers or references, usize indexes are used to indicate the location
  * of a node in the array/vector. Therefore, nodes contain the usize index of both
  * children and parent nodes. An invalid index (that is out of bounds) is treated as
  * a sentinal/terminal value by all functions. The [NIL] constant is provided in this
  * module as a convenient way to help manage this. Keep in mind that you are responsible
- * for keeping track of the index of the root node in the tree. 
- * 
+ * for keeping track of the index of the root node in the tree.
+ *
  * Since binary search trees are not self-balancing, all functions are iterative to
- * avoid any risk of stack overflow that can sometimes occur with recursive functions
+ * avoid the risk of stack overflow that can sometimes occur with recursive functions
  * on unbalanced trees.
 */
 
@@ -45,20 +45,34 @@ use std::cmp::Ordering;
 /// Value used as a sentinel.
 pub const NIL: usize = usize::MAX;
 
+/// Trait designed to model the node in a binary tree.
 pub trait Node<K>
 where
     Self: Sized,
 {
+    /// Returns the index of the parent node.
     fn parent(&self) -> usize;
+
+    /// Returns the index of the left child node.
     fn left(&self) -> usize;
+
+    /// Returns the index of the right child node.
     fn right(&self) -> usize;
+
+    /// Sets the index of the parent node.
     fn set_parent(&mut self, p: usize);
+
+    /// Sets the index of the left child node.
     fn set_left(&mut self, l: usize);
+
+    /// Sets the index of the right child node.
     fn set_right(&mut self, r: usize);
+
+    /// Returns an immutable reference to the node's key.
     fn key(&self) -> &K;
 }
 
-/// A general purpose binary tree node that implements the `Node` trait 
+/// A general purpose binary tree node that implements the `Node` trait
 /// and can be used with the functions contained in the `bst` module.
 #[derive(Debug, Clone, Copy)]
 pub struct TreeNode<K>

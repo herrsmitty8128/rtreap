@@ -3,7 +3,7 @@
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
 /*!
- * `heap` is a Rust library containing an implementation of a minimum, maximum, d-way heap.
+ * This module implements a priority queue as a heap.
  *
  * It supports:
  *
@@ -11,7 +11,7 @@
  * - Minimum heaps, without relying on [`core::cmp::Reverse`] or a custom [`std::cmp::Ord`] implementation
  * - Binary and d-way heaps. Any number of branches up to (usize::MAX - 1) / d are allowed, so use good judgement!
  *  
- * Use the [`Heap::update`] method to modify the value of an element on the heap in such
+ * Use the [update] method to modify the value of an element on the heap in such
  * a way that the element's ordering relative to other elements is changed. Modifying
  * an element's value through other means may result in a inconsistencies, logic errors,
  * panics, or other unintended consequences.
@@ -19,6 +19,155 @@
 
 use crate::error::{Error, ErrorKind, Result};
 use std::cmp::{Ord, Ordering};
+
+pub trait Priority<P>
+where
+    Self: Sized,
+{
+    fn priority(&self) -> &P;
+    fn set_priority(&mut self, new_priority: P);
+}
+
+pub fn is_valid<P, N>(heap: &mut [N], order: Ordering) -> bool
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    for i in 1..heap.len() {
+        if heap[i].priority().cmp(&heap[0].priority()) == order {
+            return false;
+        }
+    }
+    true
+}
+
+pub fn update<P, N, const BRANCHES: usize>(
+    heap: &mut [N],
+    index: usize,
+    order: Ordering,
+    new_priority: P,
+) -> Option<P>
+where
+    P: Ord + Copy,
+    N: Priority<P>,
+{
+    let len: usize = heap.len();
+    if index < len {
+        let old_priority: P = *heap[index].priority();
+        if new_priority.cmp(&old_priority) == order {
+            bubble_up::<P, N, BRANCHES>(heap, order, index);
+        } else {
+            push_down::<P, N, BRANCHES>(heap, order, index);
+        }
+        Some(old_priority)
+    } else {
+        None
+    }
+}
+
+pub fn push_down<P, N, const BRANCHES: usize>(heap: &mut [N], order: Ordering, mut index: usize)
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    let length: usize = heap.len();
+    loop {
+        let first_child: usize = (index * BRANCHES) + 1;
+        let last_child: usize = first_child + BRANCHES;
+        let mut p: usize = index;
+        for i in first_child..last_child.min(length) {
+            p = if heap[p].priority().cmp(heap[i].priority()) == order {
+                p
+            } else {
+                i
+            };
+        }
+        if p == index {
+            break;
+        }
+        heap.swap(p, index);
+        index = p;
+    }
+}
+
+pub fn remove<P, N, const BRANCHES: usize>(
+    heap: &mut Vec<N>,
+    order: Ordering,
+    index: usize,
+) -> Option<N>
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    let len: usize = heap.len();
+    if index < len {
+        let removed: N = heap.swap_remove(index);
+        if index < len - 1 {
+            if heap[index].priority().cmp(removed.priority()) == order {
+                bubble_up::<P, N, BRANCHES>(heap, order, index);
+            } else {
+                push_down::<P, N, BRANCHES>(heap, order, index);
+            }
+        }
+        Some(removed)
+    } else {
+        None
+    }
+}
+
+pub fn bubble_up<P, N, const BRANCHES: usize>(heap: &mut [N], order: Ordering, mut index: usize)
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    while index > 0 {
+        let p: usize = (index - 1) / BRANCHES; // calculate the index of the parent node
+        if heap[index].priority().cmp(heap[p].priority()) == order {
+            heap.swap(index, p); // if the child is smaller than the parent, then swap them
+        } else {
+            break;
+        }
+        index = p;
+    }
+}
+
+pub fn insert<P, N, const BRANCHES: usize>(heap: &mut Vec<N>, order: Ordering, element: N)
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    let index: usize = heap.len();
+    heap.push(element);
+    bubble_up::<P, N, BRANCHES>(heap, order, index);
+}
+
+pub fn top<P, N, const BRANCHES: usize>(heap: &mut Vec<N>, order: Ordering) -> Option<N>
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    if heap.is_empty() {
+        None
+    } else {
+        let removed: N = heap.swap_remove(0);
+        push_down::<P, N, BRANCHES>(heap, order, 0);
+        Some(removed)
+    }
+}
+
+pub fn sort<P, N, const BRANCHES: usize>(heap: &mut [N], order: Ordering)
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    let len: usize = heap.len();
+    if len > 1 {
+        let parent: usize = (len - 2) / BRANCHES;
+        for index in (0..=parent).rev() {
+            push_down::<P, N, BRANCHES>(heap, order, index);
+        }
+    }
+}
 
 /// A minimum heap with branching factor of 2.
 pub type BinaryMinHeap<T> = Heap<T, false, 2>;
@@ -209,11 +358,14 @@ where
     /// use rtreap::heap::Heap;
     /// use std::cmp::Ordering;
     ///
-    /// let mut v: Vec<usize> = vec![0, 2, 4, 6, 8, 10];
+    /// let mut heap: Heap<usize, false, 2> = Heap::new();
     ///
-    /// let mut heap: Heap<usize, false, 2> = Heap::from(&v[..]);
-    ///
+    /// heap.insert(0);
+    /// heap.insert(2);
+    /// heap.insert(4);
     /// heap.insert(5);
+    /// heap.insert(8);
+    /// heap.insert(10);
     ///
     /// if let Some(x) = heap.peek() {
     ///     assert!(*x == 0)
