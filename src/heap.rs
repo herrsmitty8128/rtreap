@@ -19,7 +19,7 @@
 
 use std::{
     cmp::{Ord, Ordering},
-    marker::PhantomData,
+    marker::PhantomData, ops::Index,
 };
 
 pub trait Priority<P>
@@ -36,6 +36,12 @@ where
     P: Ord + Copy,
 {
     priority: P,
+}
+
+impl<P> PartialEq for HeapNode<P> where P: Ord + Copy {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority == other.priority
+    }
 }
 
 impl<P> From<P> for HeapNode<P>
@@ -243,6 +249,17 @@ where
     _p: PhantomData<P>,
 }
 
+impl<P, N, const BRANCHES: usize, const MAX_HEAP: bool> Index<usize> for Heap<P, N, BRANCHES, MAX_HEAP>
+where
+    P: Ord,
+    N: Priority<P>,
+{
+    type Output = N;
+    fn index<'a>(&'a self, index: usize) -> &'a Self::Output {
+        &self.heap[index]
+    }
+}
+
 impl<P, N, const BRANCHES: usize, const MAX_HEAP: bool> Default for Heap<P, N, BRANCHES, MAX_HEAP>
 where
     P: Ord,
@@ -387,17 +404,21 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::Heap;
+    /// use rtreap::heap::{Heap, BinaryMinHeap, HeapNode, Priority};
+    /// use rand::prelude::*;
+    /// 
+    /// type MyNode = HeapNode<usize>;
     ///
-    /// let mut v: Vec<usize> = vec![0, 2, 4, 6, 8, 10];
-    ///
-    /// let mut heap: Heap<usize, false, 2> = Heap::from(&v[..]);
-    ///
-    /// if let Some(index) = heap.find(&6) {
-    ///     assert!(index == 3);
-    /// } else {
-    ///     panic!("Did not find the number 6.");
+    /// let mut v: Vec<MyNode> = Vec::new();
+    /// for i in 0..100 {
+    ///     v.push(MyNode::from(rand::thread_rng().gen_range(0..10000)));
     /// }
+    ///
+    /// let mut heap: BinaryMinHeap<usize, MyNode> = Heap::from(&v[..]);
+    ///
+    /// let index = heap.find(&v[0]).expect("Did not find the node.");
+    /// 
+    /// assert!(heap[index] == v[0]);
     /// ```
     pub fn find(&self, element: &N) -> Option<usize>
     where
@@ -411,23 +432,22 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::Heap;
+    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap};
     /// use std::cmp::Ordering;
     ///
-    /// let mut heap: Heap<usize, false, 2> = Heap::new();
+    /// type MyNode = HeapNode<usize>;
+    /// let mut heap: BinaryMaxHeap<usize, MyNode> = BinaryMaxHeap::new();
     ///
-    /// heap.insert(0);
-    /// heap.insert(2);
-    /// heap.insert(4);
-    /// heap.insert(5);
-    /// heap.insert(8);
-    /// heap.insert(10);
+    /// heap.insert(MyNode::from(0));
+    /// heap.insert(MyNode::from(2));
+    /// heap.insert(MyNode::from(4));
+    /// heap.insert(MyNode::from(5));
+    /// heap.insert(MyNode::from(8));
+    /// heap.insert(MyNode::from(10));
     ///
-    /// if let Some(x) = heap.peek() {
-    ///     assert!(*x == 0)
-    /// } else {
-    ///     panic!("heap.peek() returned None.")
-    /// }
+    /// let x = heap.peek().unwrap();
+    /// 
+    /// assert!(*x.priority() == 10, "peek(0) returned {} instead of 10", *x.priority());
     /// ```
     pub fn insert(&mut self, element: N) {
         insert::<P, N, BRANCHES>(&mut self.heap, self.order, element)
@@ -458,19 +478,22 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::Heap;
+    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap};
+    /// use rand::prelude::*;
     /// use std::cmp::Ordering;
     ///
-    /// let mut v: Vec<usize> = vec![0, 2, 4, 6, 8, 10];
-    ///
-    /// let mut heap: Heap<usize, false, 2> = Heap::from(&v[..]);
-    ///
-    /// if let Ok(old_element) = heap.remove(3) {
-    ///     assert!(old_element == 6);
-    ///     assert!(heap.is_valid());
-    /// } else {
-    ///     panic!("Heap.remove() returned an error.");
+    /// type MyNode = HeapNode<usize>;
+    /// let mut v: Vec<MyNode> = Vec::new();
+    /// let mut heap: BinaryMaxHeap<usize, MyNode> = BinaryMaxHeap::new();
+    /// for i in 0..100 {
+    ///     heap.insert(MyNode::from(rand::thread_rng().gen_range(0..10000)));
     /// }
+    ///
+    /// let removed_node = heap[23];
+    /// 
+    /// let old_element = heap.remove(23).unwrap();
+    /// assert!(old_element == removed_node);
+    /// assert!(heap.is_valid());
     /// ```
     pub fn remove(&mut self, index: usize) -> Option<N> {
         remove::<P, N, BRANCHES>(&mut self.heap, self.order, index)
@@ -481,18 +504,18 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::Heap;
+    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap};
+    /// use rand::prelude::*;
     /// use std::cmp::Ordering;
     ///
-    /// let mut v: Vec<usize> = vec![0, 2, 4, 6, 8, 10];
-    ///
-    /// let mut heap: Heap<usize, false, 2> = Heap::from(&v[..]);
-    ///
-    /// if let Some(smallest) = heap.top() {
-    ///     assert!(smallest == 0);
-    /// } else {
-    ///     panic!();
+    /// type MyNode = HeapNode<usize>;
+    /// let mut nums: [usize; 10] = [1, 0, 2, 9, 3, 8, 4, 7, 5, 6];
+    /// let mut heap: BinaryMaxHeap<usize, MyNode> = BinaryMaxHeap::new();
+    /// for n in nums {
+    ///     heap.insert(MyNode::from(n));
     /// }
+    /// 
+    /// assert!(*heap.top().unwrap().priority() == 9);
     /// ```
     pub fn top(&mut self) -> Option<N> {
         top::<P, N, BRANCHES>(&mut self.heap, self.order)
