@@ -33,10 +33,27 @@ pub trait Priority<P>
 where
     Self: Sized,
 {
+    /// Returns an immutable reference to the nodes priority.
     fn priority(&self) -> &P;
+
+    /// Sets the nodes priority to `new_priority`.
     fn set_priority(&mut self, new_priority: P);
 }
 
+
+/// A struct that implements the `Priority` trait. This struct is provided for
+/// convenience to make it a little easier to work with the functions in this
+/// module. It is intended to be used as a wrapper for other types that 
+/// implement the `Ord` and `Copy` traits.
+/// 
+/// ## Example:
+/// 
+/// ```
+/// use rtreap::heap::{HeapNode, Priority};
+/// 
+/// type MyNode = HeapNode<usize>;
+/// 
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct HeapNode<P>
 where
