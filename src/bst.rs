@@ -144,7 +144,7 @@ where
 /// let values: [usize; 7] = [5, 7, 3, 4, 1, 9, 2];
 /// let (nodes, root) = build::<usize, TreeNode<usize>>(&values);
 /// assert!(nodes.len() == values.len(), "Number of nodes is incorrect.");
-/// assert!(*nodes[root].key() == 5, "Root is {} instead of 4.", nodes[root].key());
+/// assert!(*nodes[root].key() == 5, "Root is {} instead of 5.", nodes[root].key());
 /// ```
 pub fn build<K, T>(s: &[K]) -> (Vec<T>, usize)
 where
@@ -345,6 +345,7 @@ where
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
 /// let i: usize = minimum(&nodes, root).unwrap();
+///
 /// assert!(*nodes[i].key() == 1, "Minimum returned {} instead of 1", i);
 /// ```
 pub fn minimum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
@@ -373,11 +374,9 @@ where
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
-/// if let Some(i) = maximum(&nodes, root) {
-///     assert!(*nodes[i].key() == 9, "Maximum returned {} instead of 9", i);
-/// } else {
-///     panic!("Maximum returned None.");
-/// }
+/// let i = maximum(&nodes, root).unwrap();
+///
+/// assert!(*nodes[i].key() == 9, "Maximum returned {} instead of 9", i);
 /// ```
 pub fn maximum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where

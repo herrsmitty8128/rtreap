@@ -3,25 +3,32 @@
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
 /*!
- * This module implements a priority queue as a heap.
- *
- * It supports:
+ * This module implements a priority queue as a heap. It supports:
  *
  * - Maximum heaps
- * - Minimum heaps, without relying on [`core::cmp::Reverse`] or a custom [`std::cmp::Ord`] implementation
+ * - Minimum heaps, without relying on [core::cmp::Reverse] or a custom [std::cmp::Ord] implementation
  * - Binary and d-way heaps. Any number of branches up to (usize::MAX - 1) / d are allowed, so use good judgement!
+ *
+ * Four generic parameters are consistently used throughout the module:
+ *
+ * - `P` is any type that implements the [std::cmp::Ord] trait. It is used to determine the order (or, priority) of the nodes in the tree.
+ * - `N` is a node in the tree that implements the [Priority] trait and takes `P` as its generic parameter.
+ * - `B` is a const usize value that represents the braching factor of the tree (2 for a binary tree, 3 for a ternary tree, etc.).
+ * - `MAX_HEAP` is a const bool value that, when `true`, results in a max heap. When `false`, it results in a min heap. This parameter is only present in the [Heap] struct.
  *  
- * Use the [update] method to modify the value of an element on the heap in such
+ * Use the [update] method to modify the priority of a node on the heap in such
  * a way that the element's ordering relative to other elements is changed. Modifying
- * an element's value through other means may result in a inconsistencies, logic errors,
+ * an element's value through other means may result in inconsistencies, logic errors,
  * panics, or other unintended consequences.
 */
 
 use std::{
     cmp::{Ord, Ordering},
-    marker::PhantomData, ops::Index,
+    marker::PhantomData,
+    ops::Index,
 };
 
+/// A trait used to standardize the interface for objects stored in a heap.
 pub trait Priority<P>
 where
     Self: Sized,
@@ -38,7 +45,10 @@ where
     priority: P,
 }
 
-impl<P> PartialEq for HeapNode<P> where P: Ord + Copy {
+impl<P> PartialEq for HeapNode<P>
+where
+    P: Ord + Copy,
+{
     fn eq(&self, other: &Self) -> bool {
         self.priority == other.priority
     }
@@ -66,6 +76,8 @@ where
     }
 }
 
+/// Returns true if the correct value is on top of the heap.
+/// This function is primarily used for testing.
 pub fn is_valid<P, N>(heap: &[N], order: Ordering) -> bool
 where
     P: Ord,
@@ -79,7 +91,50 @@ where
     true
 }
 
-pub fn update<P, N, const BRANCHES: usize>(
+/// Modifies the priority of an element on the heap in such a way that its
+/// ordering relative to other elements is changed. It returns `Some(P)`
+/// containing the old priority, or None if `index` is out of bounds.
+///
+/// ## Arguments:
+///
+/// - `heap` - A mutable reference to a slice of nodes sorted as a heap.
+/// - `index` - The index of the node in the tree whose priority you'd like to update.
+/// - `order` - A value indicating if `heap` is sorted as a min or max heap. Pass [std::cmp::Ordering::Greater] for a max heap or [std::cmp::Ordering::Less] for a min heap.
+/// - `new_priority` - The new priority to assign to the node located at `index` in the `heap`.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::heap::{HeapNode, Priority, update, sort, is_valid};
+/// use std::cmp::Ordering;
+/// use rand::prelude::*;
+///
+/// type MyNode = HeapNode<usize>;
+///
+/// let mut heap: Vec<MyNode> = Vec::new();
+/// for _ in 0..100 {
+///     heap.push(MyNode::from(rand::random::<usize>()));
+/// }
+///
+/// // sort the vector as a max heap
+/// sort::<usize, MyNode, 2>(&mut heap, Ordering::Greater);
+///
+/// // update the priority of the node at index 23
+/// update::<usize, MyNode, 2>(&mut heap, 23, Ordering::Greater, 12345).unwrap();
+///
+/// // verify that the heap properties still apply
+/// assert!(is_valid(&mut heap, Ordering::Greater));
+///
+/// /// // sort the vector as a min heap
+/// sort::<usize, MyNode, 2>(&mut heap, Ordering::Less);
+///
+/// // update the priority of the node at index 18
+/// update::<usize, MyNode, 2>(&mut heap, 18, Ordering::Less, 54321).unwrap();
+///
+/// // verify that the heap properties still apply
+/// assert!(is_valid(&mut heap, Ordering::Less));
+/// ```
+pub fn update<P, N, const B: usize>(
     heap: &mut [N],
     index: usize,
     order: Ordering,
@@ -93,9 +148,9 @@ where
     if index < len {
         let old_priority: P = *heap[index].priority();
         if new_priority.cmp(&old_priority) == order {
-            bubble_up::<P, N, BRANCHES>(heap, order, index);
+            bubble_up::<P, N, B>(heap, order, index);
         } else {
-            push_down::<P, N, BRANCHES>(heap, order, index);
+            push_down::<P, N, B>(heap, order, index);
         }
         Some(old_priority)
     } else {
@@ -103,15 +158,16 @@ where
     }
 }
 
-pub fn push_down<P, N, const BRANCHES: usize>(heap: &mut [N], order: Ordering, mut index: usize)
+/// Updates the order of the nodes in the heap starting from `index` and going down the tree.
+pub fn push_down<P, N, const B: usize>(heap: &mut [N], order: Ordering, mut index: usize)
 where
     P: Ord,
     N: Priority<P>,
 {
     let length: usize = heap.len();
     loop {
-        let first_child: usize = (index * BRANCHES) + 1;
-        let last_child: usize = first_child + BRANCHES;
+        let first_child: usize = (index * B) + 1;
+        let last_child: usize = first_child + B;
         let mut p: usize = index;
         for c in first_child..last_child.min(length) {
             if heap[c].priority().cmp(heap[p].priority()) == order {
@@ -131,11 +187,44 @@ where
     }
 }
 
-pub fn remove<P, N, const BRANCHES: usize>(
-    heap: &mut Vec<N>,
-    order: Ordering,
-    index: usize,
-) -> Option<N>
+/// Removes and returns the element at `index` from the heap. Returns `None` if `index` is
+/// out of bounds or the heap is empty.
+///
+/// ## Arguments:
+///
+/// - `heap` - A mutable reference to a slice of nodes sorted as a heap.
+/// - `index` - The index of the node in the tree whose priority you'd like to update.
+/// - `order` - A value indicating if `heap` is sorted as a min or max heap. Pass [std::cmp::Ordering::Greater] for a max heap or [std::cmp::Ordering::Less] for a min heap.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::heap::{HeapNode, Priority, insert, remove, is_valid};
+/// use std::cmp::Ordering;
+/// use rand::prelude::*;
+///
+/// type MyNode = HeapNode<usize>;
+///
+/// let mut heap: Vec<MyNode> = Vec::new();
+/// for _ in 0..100 {
+///     insert::<usize, MyNode, 2>(&mut heap, Ordering::Less, MyNode::from(rand::random::<usize>()));
+/// }
+///
+/// // verify the length of the heap
+/// assert!(heap.len() == 100);
+///
+/// // verify that the heap properties still apply
+/// assert!(is_valid(&mut heap, Ordering::Less));
+///
+/// while !heap.is_empty() {
+///     let index: usize = rand::thread_rng().gen_range(0..heap.len());
+///     let len: usize = heap.len();
+///     remove::<usize, MyNode, 2>(&mut heap, Ordering::Less, index);
+///     assert!(heap.len() == len - 1);
+///     assert!(is_valid(&mut heap, Ordering::Less));
+/// }
+/// ```
+pub fn remove<P, N, const B: usize>(heap: &mut Vec<N>, order: Ordering, index: usize) -> Option<N>
 where
     P: Ord,
     N: Priority<P>,
@@ -145,9 +234,9 @@ where
         let removed: N = heap.swap_remove(index);
         if index < len - 1 {
             if heap[index].priority().cmp(removed.priority()) == order {
-                bubble_up::<P, N, BRANCHES>(heap, order, index);
+                bubble_up::<P, N, B>(heap, order, index);
             } else {
-                push_down::<P, N, BRANCHES>(heap, order, index);
+                push_down::<P, N, B>(heap, order, index);
             }
         }
         Some(removed)
@@ -156,13 +245,14 @@ where
     }
 }
 
-pub fn bubble_up<P, N, const BRANCHES: usize>(heap: &mut [N], order: Ordering, mut index: usize)
+/// Updates the order of the nodes in the heap starting from `index` and going up the tree to the root.
+pub fn bubble_up<P, N, const B: usize>(heap: &mut [N], order: Ordering, mut index: usize)
 where
     P: Ord,
     N: Priority<P>,
 {
     while index > 0 {
-        let p: usize = (index - 1) / BRANCHES; // calculate the index of the parent node
+        let p: usize = (index - 1) / B; // calculate the index of the parent node
         if heap[index].priority().cmp(heap[p].priority()) == order {
             heap.swap(index, p); // if the child is smaller than the parent, then swap them
         } else {
@@ -172,17 +262,46 @@ where
     }
 }
 
-pub fn insert<P, N, const BRANCHES: usize>(heap: &mut Vec<N>, order: Ordering, element: N)
+/// Inserts `element` into the heap.
+///
+/// ## Arguments:
+///
+/// - `heap` - A mutable reference to a slice of nodes sorted as a heap.
+/// - `order` - A value indicating if `heap` is sorted as a min or max heap. Pass [std::cmp::Ordering::Greater] for a max heap or [std::cmp::Ordering::Less] for a min heap.
+/// - `element` - The new element to insert into the the `heap`. The element must implement the `Priority` trait.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::heap::{HeapNode, Priority, insert, is_valid};
+/// use std::cmp::Ordering;
+/// use rand::prelude::*;
+///
+/// type MyNode = HeapNode<usize>;
+///
+/// let mut heap: Vec<MyNode> = Vec::new();
+/// for _ in 0..100 {
+///     insert::<usize, MyNode, 2>(&mut heap, Ordering::Less, MyNode::from(rand::random::<usize>()));
+/// }
+///
+/// // verify the length of the heap
+/// assert!(heap.len() == 100);
+///
+/// // verify that the heap properties still apply
+/// assert!(is_valid(&mut heap, Ordering::Less));
+/// ```
+pub fn insert<P, N, const B: usize>(heap: &mut Vec<N>, order: Ordering, element: N)
 where
     P: Ord,
     N: Priority<P>,
 {
     let index: usize = heap.len();
     heap.push(element);
-    bubble_up::<P, N, BRANCHES>(heap, order, index);
+    bubble_up::<P, N, B>(heap, order, index);
 }
 
-pub fn top<P, N, const BRANCHES: usize>(heap: &mut Vec<N>, order: Ordering) -> Option<N>
+/// Removes and returns the element on the top of the heap. Returns `None` if the heap is empty.
+pub fn top<P, N, const B: usize>(heap: &mut Vec<N>, order: Ordering) -> Option<N>
 where
     P: Ord,
     N: Priority<P>,
@@ -191,21 +310,22 @@ where
         None
     } else {
         let removed: N = heap.swap_remove(0);
-        push_down::<P, N, BRANCHES>(heap, order, 0);
+        push_down::<P, N, B>(heap, order, 0);
         Some(removed)
     }
 }
 
-pub fn sort<P, N, const BRANCHES: usize>(heap: &mut [N], order: Ordering)
+/// Performs an in-place heap sort on a slice of objects that implement the `Priority` trait.
+pub fn sort<P, N, const B: usize>(heap: &mut [N], order: Ordering)
 where
     P: Ord,
     N: Priority<P>,
 {
     let len: usize = heap.len();
     if len > 1 {
-        let parent: usize = (len - 2) / BRANCHES;
+        let parent: usize = (len - 2) / B;
         for index in (0..=parent).rev() {
-            push_down::<P, N, BRANCHES>(heap, order, index);
+            push_down::<P, N, B>(heap, order, index);
         }
     }
 }
@@ -239,7 +359,7 @@ pub type QuinaryMaxHeap<P, N> = Heap<P, N, 5, true>;
 /// maximum heap) the value of each of its children. As a consequence, either the
 /// smallest or largest value in the tree is always located at the root of the tree.
 #[derive(Debug, Clone)]
-pub struct Heap<P, N, const BRANCHES: usize, const MAX_HEAP: bool>
+pub struct Heap<P, N, const B: usize, const MAX_HEAP: bool>
 where
     P: Ord,
     N: Priority<P>,
@@ -249,7 +369,7 @@ where
     _p: PhantomData<P>,
 }
 
-impl<P, N, const BRANCHES: usize, const MAX_HEAP: bool> Index<usize> for Heap<P, N, BRANCHES, MAX_HEAP>
+impl<P, N, const B: usize, const MAX_HEAP: bool> Index<usize> for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
     N: Priority<P>,
@@ -260,7 +380,7 @@ where
     }
 }
 
-impl<P, N, const BRANCHES: usize, const MAX_HEAP: bool> Default for Heap<P, N, BRANCHES, MAX_HEAP>
+impl<P, N, const B: usize, const MAX_HEAP: bool> Default for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
     N: Priority<P>,
@@ -270,8 +390,7 @@ where
     }
 }
 
-impl<P, N, const BRANCHES: usize, const MAX_HEAP: bool> From<&[N]>
-    for Heap<P, N, BRANCHES, MAX_HEAP>
+impl<P, N, const B: usize, const MAX_HEAP: bool> From<&[N]> for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
     N: Priority<P> + Clone,
@@ -309,7 +428,7 @@ where
         } else {
             Ordering::Less
         };
-        sort::<P, N, BRANCHES>(&mut heap, order);
+        sort::<P, N, B>(&mut heap, order);
         Self {
             heap,
             order,
@@ -318,7 +437,7 @@ where
     }
 }
 
-impl<P, N, const BRANCHES: usize, const MAX_HEAP: bool> Heap<P, N, BRANCHES, MAX_HEAP>
+impl<P, N, const B: usize, const MAX_HEAP: bool> Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
     N: Priority<P>,
@@ -359,7 +478,7 @@ where
     /// Moves all the elements of other into self, leaving other empty.
     pub fn append(&mut self, other: &mut Self) {
         self.heap.append(&mut other.heap);
-        sort::<P, N, BRANCHES>(&mut self.heap, self.order)
+        sort::<P, N, B>(&mut self.heap, self.order)
     }
 
     /// Returns the number of elements the heap can hold without reallocating.
@@ -406,7 +525,7 @@ where
     /// ```
     /// use rtreap::heap::{Heap, BinaryMinHeap, HeapNode, Priority};
     /// use rand::prelude::*;
-    /// 
+    ///
     /// type MyNode = HeapNode<usize>;
     ///
     /// let mut v: Vec<MyNode> = Vec::new();
@@ -417,7 +536,7 @@ where
     /// let mut heap: BinaryMinHeap<usize, MyNode> = Heap::from(&v[..]);
     ///
     /// let index = heap.find(&v[0]).expect("Did not find the node.");
-    /// 
+    ///
     /// assert!(heap[index] == v[0]);
     /// ```
     pub fn find(&self, element: &N) -> Option<usize>
@@ -446,11 +565,11 @@ where
     /// heap.insert(MyNode::from(10));
     ///
     /// let x = heap.peek().unwrap();
-    /// 
+    ///
     /// assert!(*x.priority() == 10, "peek(0) returned {} instead of 10", *x.priority());
     /// ```
     pub fn insert(&mut self, element: N) {
-        insert::<P, N, BRANCHES>(&mut self.heap, self.order, element)
+        insert::<P, N, B>(&mut self.heap, self.order, element)
     }
 
     /// Returns true if the heap contains no elements.
@@ -490,13 +609,13 @@ where
     /// }
     ///
     /// let removed_node = heap[23];
-    /// 
+    ///
     /// let old_element = heap.remove(23).unwrap();
     /// assert!(old_element == removed_node);
     /// assert!(heap.is_valid());
     /// ```
     pub fn remove(&mut self, index: usize) -> Option<N> {
-        remove::<P, N, BRANCHES>(&mut self.heap, self.order, index)
+        remove::<P, N, B>(&mut self.heap, self.order, index)
     }
 
     /// Removes and returns the element from the top of the heap. Returns `None` if the heap is empty.
@@ -514,11 +633,11 @@ where
     /// for n in nums {
     ///     heap.insert(MyNode::from(n));
     /// }
-    /// 
+    ///
     /// assert!(*heap.top().unwrap().priority() == 9);
     /// ```
     pub fn top(&mut self) -> Option<N> {
-        top::<P, N, BRANCHES>(&mut self.heap, self.order)
+        top::<P, N, B>(&mut self.heap, self.order)
     }
 
     /// Updates the value (or "priority") of the element at `index`.
@@ -544,7 +663,7 @@ where
     where
         P: Ord + Copy,
     {
-        update::<P, N, BRANCHES>(&mut self.heap, index, self.order, new_priority)
+        update::<P, N, B>(&mut self.heap, index, self.order, new_priority)
     }
 
     /// Returns true if the correct value is on top of the heap.
