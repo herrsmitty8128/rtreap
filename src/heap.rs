@@ -190,11 +190,6 @@ where
             if heap[c].priority().cmp(heap[p].priority()) == order {
                 p = c
             };
-            /*p = if heap[p].priority().cmp(heap[i].priority()) == order {
-                p
-            } else {
-                i
-            };*/
         }
         if p == index {
             break;
@@ -663,18 +658,26 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::Heap;
+    /// use rtreap::heap::{Heap, BinaryMinHeap, HeapNode, Priority};
     /// use std::cmp::Ordering;
+    /// use rand::prelude::*;
+    /// 
+    /// // declare our node type
+    /// type MyNode = HeapNode<usize>;
     ///
-    /// let mut v: Vec<usize> = vec![0, 2, 4, 6, 8, 10];
-    ///
-    /// let mut heap: Heap<usize, false, 3> = Heap::from(&v[..]);
-    ///
-    /// if heap.update(3, |x| *x = 11).is_err() {
-    ///     panic!();
+    /// // build a new heap consisting of 100 random numbers
+    /// let mut heap: BinaryMinHeap<usize, MyNode> = BinaryMinHeap::new();
+    /// for i in 0..100 {
+    ///     heap.insert(MyNode::from(rand::random::<usize>()));
     /// }
     ///
-    /// assert!(heap.is_valid());
+    /// // randomly update 100 elements in the heap while checking
+    /// // that the heap is still valid.
+    /// for i in 0..100 {
+    ///     let index: usize = rand::thread_rng().gen_range(0..heap.len());
+    ///     heap.update(index, rand::random::<usize>()).unwrap();
+    ///     assert!(heap.is_valid());
+    /// }
     /// ```
     pub fn update(&mut self, index: usize, new_priority: P) -> Option<P>
     where
@@ -685,17 +688,6 @@ where
 
     /// Returns true if the correct value is on top of the heap.
     /// Please note that this function is intended for use during testing.
-    ///
-    /// ## Example:
-    ///
-    /// ```
-    /// use rtreap::heap::Heap;
-    /// use std::cmp::Ordering;
-    ///
-    /// let mut v: Vec<usize> = Vec::new();
-    /// let mut heap: Heap<usize, false, 3> = Heap::from(&v[..]);
-    /// assert!(heap.is_valid());
-    /// ```
     #[doc(hidden)]
     pub fn is_valid(&self) -> bool {
         is_valid(&self.heap, self.order)
