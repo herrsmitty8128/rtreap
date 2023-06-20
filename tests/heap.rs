@@ -2,7 +2,7 @@
 pub mod test {
 
     use rand::prelude::*;
-    use rtreap::heap::Heap;
+    use rtreap::heap::{Heap, HeapNode};
 
     const COUNT: usize = 10000;
 
@@ -16,17 +16,17 @@ pub mod test {
         test_heap::<3, true>();
     }
 
-    pub fn test_heap<const D: usize, const H: bool>() {
-        let mut v: Vec<usize> = vec![0; COUNT];
+    pub fn test_heap<const B: usize, const H: bool>() {
+        type MyNode = HeapNode<usize>;
+        //let mut v: Vec<usize> = vec![0; COUNT];
+        let mut heap: Heap<usize, MyNode, B, H> = Heap::<usize, MyNode, B, H>::new();
         for _ in 0..COUNT {
-            v.push(rand::thread_rng().gen_range(0..10000));
+            heap.insert(MyNode::from(rand::thread_rng().gen_range(0..10000)));
         }
         //rand::thread_rng().fill(&mut v[..]);
 
-        let mut heap: Heap<usize, H, D> = Heap::from(&v[..]);
-
         assert!(
-            v.len() == heap.len(),
+            COUNT == heap.len(),
             "Not all elements were loaded by from()."
         );
 
@@ -38,33 +38,24 @@ pub mod test {
         }
 
         for _ in 0..COUNT {
-            heap.insert(rand::random::<usize>());
+            heap.insert(MyNode::from(rand::random::<usize>()));
             assert!(heap.is_valid(), "heap.insert() failed");
         }
 
         while !heap.is_empty() {
             let len: usize = heap.len();
-            if heap.remove(rand::thread_rng().gen_range(0..len)).is_err() {
-                panic!();
-            }
+            heap.remove(rand::thread_rng().gen_range(0..len)).unwrap();
             assert!(heap.is_valid(), "heap.remove() failed");
         }
 
         for _ in 0..COUNT {
-            heap.insert(rand::random::<usize>());
+            heap.insert(MyNode::from(rand::random::<usize>()));
             assert!(heap.is_valid(), "heap.insert() failed");
         }
 
         for _ in 0..COUNT {
             let len: usize = heap.len();
-            if heap
-                .update(rand::thread_rng().gen_range(0..len), |x| {
-                    *x = rand::random::<usize>()
-                })
-                .is_err()
-            {
-                panic!();
-            }
+            heap.update(rand::thread_rng().gen_range(0..len), rand::random::<usize>());
             assert!(heap.is_valid(), "heap.update() failed");
         }
 
@@ -76,7 +67,7 @@ pub mod test {
             match choice {
                 0 => {
                     // insert
-                    let n = rand::random::<usize>();
+                    let n = MyNode::from(rand::random::<usize>());
                     heap.insert(n);
                 }
                 1 => {
@@ -87,23 +78,14 @@ pub mod test {
                     // remove
                     if !heap.is_empty() {
                         let len: usize = heap.len();
-                        if heap.remove(rand::thread_rng().gen_range(0..len)).is_err() {
-                            panic!()
-                        }
+                        heap.remove(rand::thread_rng().gen_range(0..len)).unwrap();
                     }
                 }
                 _ => {
                     // update
                     let len: usize = heap.len();
                     if !heap.is_empty() {
-                        if heap
-                            .update(rand::thread_rng().gen_range(0..len), |x| {
-                                *x = rand::random::<usize>()
-                            })
-                            .is_err()
-                        {
-                            panic!("heap.update() returned an error");
-                        }
+                        heap.update(rand::thread_rng().gen_range(0..len), rand::random::<usize>());
                     }
                 }
             }

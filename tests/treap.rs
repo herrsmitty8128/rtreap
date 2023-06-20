@@ -34,7 +34,7 @@ mod tests {
             );
         }
 
-        treap.inorder(0, print_key);
+        //treap.inorder(0, print_key);
 
         for key in keys.iter() {
             treap.remove(key);

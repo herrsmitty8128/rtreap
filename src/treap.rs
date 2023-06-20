@@ -37,17 +37,18 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     }
 }
 
-pub fn bubble_up<K, P, T>(nodes: &mut Vec<T>, root: &mut usize, sort_order: Ordering, index: usize)
+pub fn bubble_up<K, P, T>(nodes: &mut Vec<T>, root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
     T: Node<K, P>,
 {
-    while nodes[index].parent() < nodes.len()
+    let len: usize = nodes.len();
+    while nodes[index].parent() < len
         && nodes[index]
             .priority()
             .cmp(nodes[nodes[index].parent()].priority())
-            == sort_order
+            == order
     {
         let p: usize = nodes[index].parent();
         if index == nodes[p].right() {
@@ -75,7 +76,7 @@ where
     Ok(())
 }
 
-pub fn push_down<K, P, T>(nodes: &mut [T], root: &mut usize, sort_order: Ordering, index: usize)
+pub fn push_down<K, P, T>(nodes: &mut [T], root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
@@ -87,7 +88,7 @@ where
                 || nodes[nodes[index].left()]
                     .priority()
                     .cmp(nodes[nodes[index].right()].priority())
-                    == sort_order)
+                    == order)
         {
             bst::rotate_right(nodes, root, index);
         } else {
@@ -99,7 +100,7 @@ where
 pub fn remove<K, P, T>(
     nodes: &mut Vec<T>,
     root: &mut usize,
-    sort_order: Ordering,
+    order: Ordering,
     index: usize,
 ) -> Result<T>
 where
@@ -116,7 +117,7 @@ where
         *root = bst::NIL;
         Ok(nodes.pop().expect("treap.pop() should never panic"))
     } else {
-        push_down(nodes, root, sort_order, index);
+        push_down(nodes, root, order, index);
         let p: usize = nodes[index].parent();
         if nodes[p].left() == index {
             nodes[p].set_left(bst::NIL);
