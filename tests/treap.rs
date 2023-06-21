@@ -7,13 +7,6 @@ mod tests {
 
     const COUNT: usize = 1000;
 
-    fn print_key<K>(n: &K)
-    where
-        K: Copy + Eq + PartialEq + Ord + std::fmt::Debug,
-    {
-        println!("{:?}", n);
-    }
-
     #[test]
     pub fn test_treap() {
         let mut treap: Treap<usize, usize, false> = Treap::new();

@@ -40,6 +40,41 @@ where
     fn set_priority(&mut self, new_priority: P);
 }
 
+/// An abstract interface for a priority queue. This interface is generally designed for use with
+/// implementations based on a linear model; one that stores its elements in an array or vector.
+pub trait PriorityQueue<P, N>
+where
+    P: Ord + Copy,
+    N: Priority<P>,
+{
+    /// Inserts an element into a priorty queue.
+    fn insert(&mut self, element: N);
+
+    /// Updates the priorty of the element located at `index` in the priority queue.
+    /// Returns `None` if the element does not exist in the queue.
+    fn update(&mut self, index: usize, new_priority: P) -> Option<P>;
+
+    /// Removes and returns the element located at `index` from the priority queue.
+    /// Returns `None` if the element does not exist in the queue.
+    fn remove(&mut self, index: usize) -> Option<N>;
+
+    /// Removes and returns the element with the highest (or lowest) priority from the queue.
+    /// Returns `None` if the queue is empty.
+    fn top(&mut self) -> Option<N>;
+
+    /// Returns an immutable reference to the element with the highest (or lowest) priority in the queue.
+    /// Returns `None` if the queue is empty.
+    fn peek(&self) -> Option<&N>;
+
+    /// Returns true if the queue is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Returns the number of elements in the queue.
+    fn len(&self) -> usize;
+}
+
 /// A struct that implements the `Priority` trait. This struct is provided for
 /// convenience to make it a little easier to work with the functions in this
 /// module. It is intended to be used as a wrapper for other types that
@@ -100,7 +135,7 @@ where
     N: Priority<P>,
 {
     for i in 1..heap.len() {
-        if heap[i].priority().cmp(&heap[0].priority()) == order {
+        if heap[i].priority().cmp(heap[0].priority()) == order {
             return false;
         }
     }
@@ -386,7 +421,7 @@ where
     N: Priority<P>,
 {
     type Output = N;
-    fn index<'a>(&'a self, index: usize) -> &'a Self::Output {
+    fn index(&'_ self, index: usize) -> &'_ Self::Output {
         &self.heap[index]
     }
 }
@@ -411,7 +446,7 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::{Heap, Priority, BinaryMinHeap, BinaryMaxHeap, HeapNode};
+    /// use rtreap::heap::{Heap, Priority, BinaryMinHeap, BinaryMaxHeap, HeapNode, PriorityQueue};
     /// use std::cmp::Ordering;
     /// use rand::prelude::*;
     ///  
@@ -424,11 +459,11 @@ where
     ///
     /// let mut heap: BinaryMinHeap<usize, MyNode> = Heap::from(&v[..]);
     /// assert!(heap.is_valid());
-    /// assert!(heap.order() == Ordering::Less);
+    /// assert!(!heap.is_max_heap());
     ///
     /// let mut heap: BinaryMaxHeap<usize, MyNode> = Heap::from(&v[..]);
     /// assert!(heap.is_valid());
-    /// assert!(heap.order() == Ordering::Greater);
+    /// assert!(heap.is_max_heap());
     ///
     /// assert!(heap.len() == v.len())
     /// ```
@@ -518,8 +553,8 @@ where
     /// Returns the sort order of the heap.
     /// `Ordering::Greater` indicates a maximum heap.
     /// `Ordering::Less` indicates a minimum heap.
-    pub fn order(&self) -> Ordering {
-        self.order
+    pub fn is_max_heap(&self) -> bool {
+        self.order == Ordering::Greater
     }
 
     /// Clears the heap, removing all elements.
@@ -557,12 +592,25 @@ where
         (0..self.heap.len()).find(|&i| self.heap[i] == *element)
     }
 
+    /// Returns true if the correct value is on top of the heap.
+    /// Please note that this function is intended for use during testing.
+    #[doc(hidden)]
+    pub fn is_valid(&self) -> bool {
+        is_valid(&self.heap, self.order)
+    }
+}
+
+impl<P, N, const B: usize, const MAX_HEAP: bool> PriorityQueue<P, N> for Heap<P, N, B, MAX_HEAP>
+where
+    P: Ord + Copy,
+    N: Priority<P>,
+{
     /// Inserts an element into the heap.
     ///
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap};
+    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap, PriorityQueue};
     /// use std::cmp::Ordering;
     ///
     /// type MyNode = HeapNode<usize>;
@@ -579,22 +627,22 @@ where
     ///
     /// assert!(*x.priority() == 10, "peek(0) returned {} instead of 10", *x.priority());
     /// ```
-    pub fn insert(&mut self, element: N) {
+    fn insert(&mut self, element: N) {
         insert::<P, N, B>(&mut self.heap, self.order, element)
     }
 
     /// Returns true if the heap contains no elements.
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.heap.is_empty()
     }
 
     /// Returns the number of elements in the heap, also referred to as its 'length'.
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.heap.len()
     }
 
     /// Returns an immutable reference to the element on top of the heap without removing it or `None` if the heap is empty.
-    pub fn peek(&self) -> Option<&N> {
+    fn peek(&self) -> Option<&N> {
         if self.heap.is_empty() {
             None
         } else {
@@ -608,7 +656,7 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap};
+    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap, PriorityQueue};
     /// use rand::prelude::*;
     /// use std::cmp::Ordering;
     ///
@@ -625,7 +673,7 @@ where
     /// assert!(old_element == removed_node);
     /// assert!(heap.is_valid());
     /// ```
-    pub fn remove(&mut self, index: usize) -> Option<N> {
+    fn remove(&mut self, index: usize) -> Option<N> {
         remove::<P, N, B>(&mut self.heap, self.order, index)
     }
 
@@ -634,7 +682,7 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap};
+    /// use rtreap::heap::{Heap, HeapNode, Priority, BinaryMaxHeap, PriorityQueue};
     /// use rand::prelude::*;
     /// use std::cmp::Ordering;
     ///
@@ -647,7 +695,7 @@ where
     ///
     /// assert!(*heap.top().unwrap().priority() == 9);
     /// ```
-    pub fn top(&mut self) -> Option<N> {
+    fn top(&mut self) -> Option<N> {
         top::<P, N, B>(&mut self.heap, self.order)
     }
 
@@ -657,7 +705,7 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::heap::{Heap, BinaryMinHeap, HeapNode, Priority};
+    /// use rtreap::heap::{Heap, BinaryMinHeap, HeapNode, Priority, PriorityQueue};
     /// use std::cmp::Ordering;
     /// use rand::prelude::*;
     ///
@@ -678,17 +726,10 @@ where
     ///     assert!(heap.is_valid());
     /// }
     /// ```
-    pub fn update(&mut self, index: usize, new_priority: P) -> Option<P>
+    fn update(&mut self, index: usize, new_priority: P) -> Option<P>
     where
         P: Ord + Copy,
     {
         update::<P, N, B>(&mut self.heap, index, self.order, new_priority)
-    }
-
-    /// Returns true if the correct value is on top of the heap.
-    /// Please note that this function is intended for use during testing.
-    #[doc(hidden)]
-    pub fn is_valid(&self) -> bool {
-        is_valid(&self.heap, self.order)
     }
 }

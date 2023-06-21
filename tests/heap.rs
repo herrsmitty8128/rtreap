@@ -2,7 +2,7 @@
 pub mod test {
 
     use rand::prelude::*;
-    use rtreap::heap::{Heap, HeapNode};
+    use rtreap::heap::{Heap, HeapNode, PriorityQueue};
 
     const COUNT: usize = 10000;
 
@@ -55,7 +55,10 @@ pub mod test {
 
         for _ in 0..COUNT {
             let len: usize = heap.len();
-            heap.update(rand::thread_rng().gen_range(0..len), rand::random::<usize>());
+            heap.update(
+                rand::thread_rng().gen_range(0..len),
+                rand::random::<usize>(),
+            );
             assert!(heap.is_valid(), "heap.update() failed");
         }
 
@@ -85,7 +88,10 @@ pub mod test {
                     // update
                     let len: usize = heap.len();
                     if !heap.is_empty() {
-                        heap.update(rand::thread_rng().gen_range(0..len), rand::random::<usize>());
+                        heap.update(
+                            rand::thread_rng().gen_range(0..len),
+                            rand::random::<usize>(),
+                        );
                     }
                 }
             }
