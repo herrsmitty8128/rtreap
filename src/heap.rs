@@ -198,6 +198,7 @@ where
     let len: usize = heap.len();
     if index < len {
         let old_priority: P = *heap[index].priority();
+        heap[index].set_priority(new_priority);
         if new_priority.cmp(&old_priority) == order {
             bubble_up::<P, N, B>(heap, order, index);
         } else {
