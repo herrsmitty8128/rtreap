@@ -129,13 +129,17 @@ where
 
 /// Returns true if the correct value is on top of the heap.
 /// This function is primarily used for testing.
-pub fn is_valid<P, N>(heap: &[N], order: Ordering) -> bool
+/// In the case of a heap that is a "complete" binary tree, the root
+/// will always be located at index 0. However, with other types of
+/// heaps, such as a treap, the node may be located at a different
+/// index. Be sure to pass the correct root index when calling this function.
+pub fn is_valid<P, N>(heap: &[N], order: Ordering, root: usize) -> bool
 where
     P: Ord,
     N: Priority<P>,
 {
     for i in 1..heap.len() {
-        if heap[i].priority().cmp(heap[0].priority()) == order {
+        if heap[i].priority().cmp(heap[root].priority()) == order {
             return false;
         }
     }
@@ -597,7 +601,7 @@ where
     /// Please note that this function is intended for use during testing.
     #[doc(hidden)]
     pub fn is_valid(&self) -> bool {
-        is_valid(&self.heap, self.order)
+        is_valid(&self.heap, self.order, 0)
     }
 }
 

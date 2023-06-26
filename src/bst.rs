@@ -39,7 +39,6 @@
  * on unbalanced trees.
 */
 
-use crate::error::{Error, ErrorKind, Result};
 use std::cmp::Ordering;
 
 /// Value used as a sentinel.
@@ -68,8 +67,29 @@ where
     /// Sets the index of the right child node.
     fn set_right(&mut self, r: usize);
 
+    /// Returns `true` if the node is a leaf node.
+    fn is_leaf(&self) -> bool {
+        self.left() == NIL && self.right() == NIL
+    }
+
     /// Returns an immutable reference to the node's key.
     fn key(&self) -> &K;
+}
+
+pub trait BinarySearchTree<K, N>
+where
+    K: Ord + Copy,
+    N: Node<K>
+{
+    fn insert(&mut self, key: K) -> bool;
+    fn remove(&mut self, key: &K) -> bool;
+    fn search(&self) -> Option<&K>;
+    fn minimum(&self) -> Option<&K>;
+    fn maximum(&self) -> Option<&K>;
+    fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 /// A general purpose binary tree node that implements the `Node` trait
@@ -201,9 +221,9 @@ where
 /// }
 ///
 /// ```
-pub fn swap_remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
+pub fn swap_remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> Option<N>
 where
-    T: Node<K>,
+    N: Node<K>,
 {
     let len: usize = nodes.len();
     if index < len {
@@ -229,12 +249,9 @@ where
                 *root = index;
             }
         }
-        Ok(nodes.swap_remove(index))
+        Some(nodes.swap_remove(index))
     } else {
-        Err(Error::new(
-            ErrorKind::IndexOutOfBounds,
-            "Cannot delete a node that does not exist.",
-        ))
+        None
     }
 }
 
@@ -301,10 +318,10 @@ where
 /// assert!(nodes.is_empty(), "Failed to remove all nodes.");
 /// assert!(root == NIL, "root is not NIL.");
 /// ```
-pub fn remove<K, T>(nodes: &mut Vec<T>, root: &mut usize, index: usize) -> Result<T>
+pub fn remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> Option<N>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    N: Node<K>,
 {
     let len: usize = nodes.len();
     if index < len {
@@ -328,10 +345,7 @@ where
         }
         swap_remove(nodes, root, index)
     } else {
-        Err(Error::new(
-            ErrorKind::IndexOutOfBounds,
-            "Cannot delete a node that does not exist.",
-        ))
+        None
     }
 }
 
@@ -841,4 +855,25 @@ where
         }
     }
     None
+}
+
+/// Returns true if the properties of a binary tree hold true.
+pub fn is_valid<K, T>(nodes: &[T], root: usize) -> bool
+where
+    K: Ord,
+    T: Node<K>,
+{
+    if root >= nodes.len() {
+        false
+    } else if let Some(mut prev) = minimum(&nodes, root) {
+        while let Some(next) = in_order_next(&nodes, prev) {
+            if *nodes[prev].key() > *nodes[next].key() {
+                return false;
+            };
+            prev = next;
+        }
+        true
+    } else {
+        false
+    }
 }

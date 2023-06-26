@@ -7,18 +7,17 @@
  */
 
 use crate::bst;
+use crate::heap;
 use crate::error::{Error, ErrorKind, Result};
 use std::cmp::Ordering;
 
-pub trait Node<K, P>: bst::Node<K>
+pub trait Node<K, P>: bst::Node<K> + heap::Priority<P>
 where
     Self: Sized,
     K: Ord + Copy,
     P: Ord + Copy,
 {
-    fn priority(&self) -> &P;
     fn entry(&self) -> &(K, P);
-    fn is_leaf(&self) -> bool;
 }
 
 #[allow(unused_variables)]
@@ -37,11 +36,11 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     }
 }
 
-pub fn bubble_up<K, P, T>(nodes: &mut Vec<T>, root: &mut usize, order: Ordering, index: usize)
+pub fn bubble_up<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    T: Node<K, P>,
+    N: Node<K, P>,
 {
     let len: usize = nodes.len();
     while nodes[index].parent() < len
@@ -59,28 +58,39 @@ where
     }
 }
 
-pub fn insert<K, P, T>(
-    nodes: &mut Vec<T>,
+pub fn insert<K, P, N>(
+    nodes: &mut Vec<N>,
     root: &mut usize,
     sort_order: Ordering,
-    node: T,
+    node: N,
 ) -> Result<()>
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    T: Node<K, P>,
+    N: Node<K, P>,
 {
+    match bst::insert(nodes, root, node) {
+        Ok(index) => bubble_up(nodes, root, sort_order, index),
+        Err(index) => {
+            let old_node: N = nodes[index];
+            nodes[index] = node;
+            nodes[index].set_left(old_node.left());
+            nodes[index].set_right(old_node.right());
+            nodes[index].set_parent(old_node.parent());
+            
+        },
+    }
     let index: usize = bst::insert(nodes, root, node)
         .map_err(|_| Error::new(ErrorKind::InsertionFailed, "Key already exists."))?;
     bubble_up(nodes, root, sort_order, index);
     Ok(())
 }
 
-pub fn push_down<K, P, T>(nodes: &mut [T], root: &mut usize, order: Ordering, index: usize)
+pub fn push_down<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    T: Node<K, P>,
+    N: Node<K, P>,
 {
     while !nodes[index].is_leaf() {
         if nodes[index].left() != bst::NIL
@@ -97,25 +107,22 @@ where
     }
 }
 
-pub fn remove<K, P, T>(
-    nodes: &mut Vec<T>,
+pub fn remove<K, P, N>(
+    nodes: &mut Vec<N>,
     root: &mut usize,
     order: Ordering,
     index: usize,
-) -> Result<T>
+) -> Option<N>
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    T: Node<K, P>,
+    N: Node<K, P>,
 {
     if index >= nodes.len() {
-        Err(Error::new(
-            ErrorKind::IndexOutOfBounds,
-            "Index does not exist.",
-        ))
+        None
     } else if nodes.len() == 1 {
         *root = bst::NIL;
-        Ok(nodes.pop().expect("treap.pop() should never panic"))
+        Some(nodes.pop().expect("treap.pop() should never panic"))
     } else {
         push_down(nodes, root, order, index);
         let p: usize = nodes[index].parent();
@@ -128,10 +135,57 @@ where
     }
 }
 
+pub fn update<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, key: &K, new_priority: P) -> Option<P> 
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: Node<K, P>,
+{
+    if let Some(index) = bst::search(&nodes, *root, key) {
+        let old_priority: P = *nodes[index].priority();
+        nodes[index].set_priority(new_priority);
+        if new_priority.cmp(&old_priority) == order {
+            bubble_up(nodes, root, order, index);
+        } else {
+            push_down(nodes, root, order, index);
+        }
+        Some(old_priority)
+    } else {
+        None
+    }
+}
+
+pub fn top<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering) -> Option<N> 
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: Node<K, P>,
+{
+    if nodes.is_empty() {
+        None
+    } else {
+        remove(nodes, root, order, *root)
+    }
+}
+
+/// Returns true if the properties of a heap and a bst hold true.
+pub fn is_valid<K, P, N>(nodes: &Vec<N>, root: usize, order: Ordering) -> bool  
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: Node<K, P>,
+{
+    if root >= nodes.len() || !heap::is_valid(nodes, order, root) || !bst::is_valid(nodes, root) {
+        false
+    } else {
+        false
+    }
+}
+
 pub mod basic {
 
     use super::Node as NodeTrait;
-    use crate::{bst, error};
+    use crate::{heap, heap::Priority, bst, error};
     use std::cmp::Ordering;
 
     #[derive(Debug, Clone, Copy)]
@@ -161,7 +215,7 @@ pub mod basic {
         }
     }
 
-    impl<K, P> super::Node<K, P> for Node<K, P>
+    impl<K, P> heap::Priority<P> for Node<K, P>
     where
         K: Ord + Copy,
         P: Ord + Copy,
@@ -172,13 +226,19 @@ pub mod basic {
         }
 
         #[inline]
+        fn set_priority(&mut self, new_priority: P) {
+            self.entry.1 = new_priority;
+        }
+    }
+
+    impl<K, P> super::Node<K, P> for Node<K, P>
+    where
+        K: Ord + Copy,
+        P: Ord + Copy,
+    {
+        #[inline]
         fn entry(&self) -> &(K, P) {
             &self.entry
-        }
-
-        #[inline]
-        fn is_leaf(&self) -> bool {
-            self.left == bst::NIL && self.right == bst::NIL
         }
     }
 
@@ -231,7 +291,7 @@ pub mod basic {
     {
         treap: Vec<Node<K, P>>,
         root: usize,
-        sort_order: Ordering,
+        order: Ordering,
     }
 
     impl<K, P, const MAX_HEAP: bool> Default for Treap<K, P, MAX_HEAP>
@@ -253,7 +313,7 @@ pub mod basic {
             Self {
                 treap: Vec::new(),
                 root: bst::NIL,
-                sort_order: if MAX_HEAP {
+                order: if MAX_HEAP {
                     Ordering::Greater
                 } else {
                     Ordering::Less
@@ -265,7 +325,7 @@ pub mod basic {
             Self {
                 treap: Vec::with_capacity(capacity),
                 root: bst::NIL,
-                sort_order: if MAX_HEAP {
+                order: if MAX_HEAP {
                     Ordering::Greater
                 } else {
                     Ordering::Less
@@ -303,7 +363,7 @@ pub mod basic {
                     if self.treap[i]
                         .priority()
                         .cmp(self.treap[self.root].priority())
-                        == self.sort_order
+                        == self.order
                     {
                         return false;
                     }
@@ -364,7 +424,7 @@ pub mod basic {
             super::insert(
                 &mut self.treap,
                 &mut self.root,
-                self.sort_order,
+                self.order,
                 Node::from((key, priority)),
             )
         }
@@ -374,10 +434,11 @@ pub mod basic {
         }*/
 
         fn remove(&mut self, key: &K) -> Option<(K, P)> {
-            if let Some(i) = bst::search(&self.treap, self.root, key) {
-                match super::remove(&mut self.treap, &mut self.root, self.sort_order, i) {
-                    Ok(node) => Some(node.entry),
-                    Err(_) => None,
+            if let Some(index) = bst::search(&self.treap, self.root, key) {
+                if let Some(node) = super::remove(&mut self.treap, &mut self.root, self.order, index) {
+                    Some(*node.entry())
+                } else {
+                    None
                 }
             } else {
                 None
@@ -385,29 +446,14 @@ pub mod basic {
         }
 
         fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
-            if let Some(index) = bst::search(&self.treap, self.root, key) {
-                let old_priority: P = *self.treap[index].priority();
-                self.treap[index].entry.1 = new_priority;
-                if new_priority.cmp(&old_priority) == self.sort_order {
-                    super::bubble_up(&mut self.treap, &mut self.root, self.sort_order, index);
-                } else {
-                    super::push_down(&mut self.treap, &mut self.root, self.sort_order, index);
-                }
-                Some(old_priority)
-            } else {
-                None
-            }
+            super::update(&mut self.treap, &mut self.root, self.order, key, new_priority)
         }
 
         fn top(&mut self) -> Option<(K, P)> {
-            if self.treap.is_empty() {
-                None
+            if let Some(x) = super::top(&mut self.treap, &mut self.root, self.order) {
+                Some(*x.entry())
             } else {
-                let i: usize = self.root;
-                match super::remove(&mut self.treap, &mut self.root, self.sort_order, i) {
-                    Ok(node) => Some(node.entry),
-                    Err(_) => None,
-                }
+                None
             }
         }
     }
