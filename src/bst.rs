@@ -79,7 +79,7 @@ where
 pub trait BinarySearchTree<K, N>
 where
     K: Ord + Copy,
-    N: Node<K>
+    N: Node<K>,
 {
     fn insert(&mut self, key: K) -> bool;
     fn remove(&mut self, key: &K) -> bool;
@@ -865,8 +865,8 @@ where
 {
     if root >= nodes.len() {
         false
-    } else if let Some(mut prev) = minimum(&nodes, root) {
-        while let Some(next) = in_order_next(&nodes, prev) {
+    } else if let Some(mut prev) = minimum(nodes, root) {
+        while let Some(next) = in_order_next(nodes, prev) {
             if *nodes[prev].key() > *nodes[next].key() {
                 return false;
             };
