@@ -106,7 +106,7 @@ where
         None
     } else if nodes.len() == 1 {
         *root = bst::NIL;
-        Some(nodes.pop().unwrap()) // treap.pop() should never panic
+        Some(nodes.pop().unwrap()) // should never panic
     } else {
         push_down(nodes, root, order, index);
         let p: usize = nodes[index].parent();
@@ -335,13 +335,6 @@ where
     pub fn heap_is_valid(&self) -> bool {
         is_valid(&self.treap, self.root, self.order)
     }
-
-    /*pub fn inorder<F>(&self, n: usize, callback: F)
-    where
-        F: Fn(&K),
-    {
-        bst::in_order(&self.treap, n, callback);
-    }*/
 }
 
 impl<K, P, const MAX_HEAP: bool> Treap<K, P, MAX_HEAP> for BasicTreap<K, P, MAX_HEAP>
@@ -392,10 +385,6 @@ where
             TreapNode::from((key, priority)),
         )
     }
-
-    /*pub fn iter(&self) -> std::slice::Iter<'_, BasicNode<K, P>> {
-        self.treap.iter()
-    }*/
 
     fn remove(&mut self, key: &K) -> Option<(K, P)> {
         if let Some(index) = bst::search(&self.treap, self.root, key) {
