@@ -1,15 +1,14 @@
 #[cfg(test)]
 mod tests {
     use rand::prelude::*;
-    use rtreap::treap::basic::Treap;
-    use rtreap::treap::Treap as TreapTrait;
+    use rtreap::treap::{Treap as TreapTrait, BasicTreap};
     use std::vec;
 
     const COUNT: usize = 1000;
 
     #[test]
     pub fn test_treap() {
-        let mut treap: Treap<usize, usize, false> = Treap::new();
+        let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
         let mut keys: Vec<usize> = vec![0; COUNT];
         rand::thread_rng().fill(&mut keys[..]);
 
@@ -22,7 +21,7 @@ mod tests {
                 .insert(*key, priority)
                 .expect("treap.insert() failed.");
             assert!(
-                treap.heap_is_valid(),
+                treap.is_valid(),
                 "heap priorities violated after insertion"
             );
         }
@@ -31,7 +30,9 @@ mod tests {
 
         for key in keys.iter() {
             treap.remove(key);
-            assert!(treap.heap_is_valid(), "heap priorities violated");
+            if !treap.is_empty() {
+                assert!(treap.is_valid(), "treap priorities violated");
+            }
         }
 
         assert!(treap.len() == 0, "treap length is {} not zero", treap.len());

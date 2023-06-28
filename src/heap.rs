@@ -178,7 +178,7 @@ where
 /// update::<usize, MyNode, 2>(&mut heap, 23, Ordering::Greater, 12345).unwrap();
 ///
 /// // verify that the heap properties still apply
-/// assert!(is_valid(&mut heap, Ordering::Greater));
+/// assert!(is_valid(&mut heap, Ordering::Greater, 0));
 ///
 /// /// // sort the vector as a min heap
 /// sort::<usize, MyNode, 2>(&mut heap, Ordering::Less);
@@ -187,7 +187,7 @@ where
 /// update::<usize, MyNode, 2>(&mut heap, 18, Ordering::Less, 54321).unwrap();
 ///
 /// // verify that the heap properties still apply
-/// assert!(is_valid(&mut heap, Ordering::Less));
+/// assert!(is_valid(&mut heap, Ordering::Less, 0));
 /// ```
 pub fn update<P, N, const B: usize>(
     heap: &mut [N],
@@ -265,14 +265,14 @@ where
 /// assert!(heap.len() == 100);
 ///
 /// // verify that the heap properties still apply
-/// assert!(is_valid(&mut heap, Ordering::Less));
+/// assert!(is_valid(&mut heap, Ordering::Less, 0));
 ///
 /// while !heap.is_empty() {
 ///     let index: usize = rand::thread_rng().gen_range(0..heap.len());
 ///     let len: usize = heap.len();
 ///     remove::<usize, MyNode, 2>(&mut heap, Ordering::Less, index);
 ///     assert!(heap.len() == len - 1);
-///     assert!(is_valid(&mut heap, Ordering::Less));
+///     assert!(is_valid(&mut heap, Ordering::Less, 0));
 /// }
 /// ```
 pub fn remove<P, N, const B: usize>(heap: &mut Vec<N>, order: Ordering, index: usize) -> Option<N>
@@ -339,7 +339,7 @@ where
 /// assert!(heap.len() == 100);
 ///
 /// // verify that the heap properties still apply
-/// assert!(is_valid(&mut heap, Ordering::Less));
+/// assert!(is_valid(&mut heap, Ordering::Less, 0));
 /// ```
 pub fn insert<P, N, const B: usize>(heap: &mut Vec<N>, order: Ordering, element: N)
 where

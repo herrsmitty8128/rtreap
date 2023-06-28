@@ -9,26 +9,51 @@
 use crate::{bst, heap};
 use std::cmp::Ordering;
 
+/// A trait that defines the interface of a node in a treap. Implementors of this trait
+/// are also required to implement [bst::Node<K>] and [heap::Priority<P>].
 pub trait Node<K, P>: bst::Node<K> + heap::Priority<P>
 where
     Self: Sized,
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Should return am immutable reference to a tuple containing the
+    /// node's key and priority values.
     fn entry(&self) -> &(K, P);
 }
 
+/// A trait that defines the interface of a treap.
 #[allow(unused_variables)]
 pub trait Treap<K, P, const MAX_HEAP: bool> {
+    /// Inserts a new key and priority value into the treap. This function
+    /// should return `Some(())` on success or `None` if the key already
+    /// exists in the treap.
     fn insert(&mut self, key: K, priority: P) -> Option<()>;
+
+    ///
     fn remove(&mut self, key: &K) -> Option<(K, P)>;
+
+    ///
     fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
         None // update does not apply to all types of treaps
     }
+
+    /// Removes and returns the element on the top of the heap in the form of a tuple containing
+    /// the removed node's key and priority. Returns `None` if the heap is empty.
     fn top(&mut self) -> Option<(K, P)>;
+
+    /// Returns an immutable reference to a tuple containing the key and value of the node on top
+    /// of the heap without removing it or `None` if the heap is empty.
     fn peek(&self) -> Option<&(K, P)>;
+
+    /// Performs a binary search for `key` and returns an immutable reference to a tuple
+    /// containing its key and priority. Returns `None` if the key does not exist in the treap.
     fn search(&self, key: &K) -> Option<&(K, P)>;
+
+    /// Returns the number of entries in the treap.
     fn len(&self) -> usize;
+
+    /// Returns true if the treap is empty.
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -319,20 +344,19 @@ where
     /// ## Example:
     ///
     /// ```
-    /// use rtreap::treap::Treap as TreapTrait;
-    /// use rtreap::treap::basic::Treap;
+    /// use rtreap::treap::{Treap as TreapTrait, BasicTreap};
     /// use std::cmp::Ordering;
     ///
     /// let mut v: Vec<usize> = Vec::new();
-    /// let mut treap: Treap<usize, usize, false> = Treap::new();
+    /// let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
     /// treap.insert(1, 234);
     /// treap.insert(333, 21);
     /// treap.insert(74, 12);
     /// treap.insert(559, 32);
-    /// assert!(treap.heap_is_valid());
+    /// assert!(treap.is_valid());
     /// ```
     #[doc(hidden)]
-    pub fn heap_is_valid(&self) -> bool {
+    pub fn is_valid(&self) -> bool {
         is_valid(&self.treap, self.root, self.order)
     }
 }
@@ -371,11 +395,10 @@ where
     /// ## Examples:
     ///
     /// ```
-    /// use rtreap::treap::Treap as TreapTrait;
-    /// use rtreap::treap::basic::Treap;
+    /// use rtreap::treap::{Treap as TreapTrait, BasicTreap};
     ///
-    /// let mut treap: Treap<usize, usize, false> = Treap::new();
-    /// assert!(treap.insert(123, 456).is_ok(), "Treap insertion failed.");
+    /// let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
+    /// assert!(treap.insert(123, 456).is_some(), "Treap insertion failed.");
     /// ```
     fn insert(&mut self, key: K, priority: P) -> Option<()> {
         insert(
