@@ -10,7 +10,7 @@ use crate::{bst, heap};
 use std::cmp::Ordering;
 
 /// A trait that defines the interface of a node in a treap. Implementors of this trait
-/// are also required to implement [bst::Node<K>] and [heap::Priority<P>].
+/// are also required to also implement [bst::Node<K>] and [heap::Priority<P>].
 pub trait Node<K, P>: bst::Node<K> + heap::Priority<P>
 where
     Self: Sized,
@@ -30,16 +30,19 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     /// exists in the treap.
     fn insert(&mut self, key: K, priority: P) -> Option<()>;
 
-    ///
+    /// Searches for the element containing `key`, removes it from the heap, 
+    /// and returns a tuple containing its key and priority or `None`
+    /// if `key` does not exist in the heap.
     fn remove(&mut self, key: &K) -> Option<(K, P)>;
 
-    ///
+    /// Searches for the element containing `key`, sets is priority to `new_priority`,
+    /// and returns the old priority or `None` if `key` does not exist in the heap.
     fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
         None // update does not apply to all types of treaps
     }
 
     /// Removes and returns the element on the top of the heap in the form of a tuple containing
-    /// the removed node's key and priority. Returns `None` if the heap is empty.
+    /// the removed node's key and priority or `None` if the heap is empty.
     fn top(&mut self) -> Option<(K, P)>;
 
     /// Returns an immutable reference to a tuple containing the key and value of the node on top
@@ -47,7 +50,7 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     fn peek(&self) -> Option<&(K, P)>;
 
     /// Performs a binary search for `key` and returns an immutable reference to a tuple
-    /// containing its key and priority. Returns `None` if the key does not exist in the treap.
+    /// containing its key and priority or `None` if the key does not exist in the treap.
     fn search(&self, key: &K) -> Option<&(K, P)>;
 
     /// Returns the number of entries in the treap.
@@ -59,6 +62,7 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     }
 }
 
+/// Updates the order of the nodes in the treap starting from `index` and going up the tree to the root.
 pub fn bubble_up<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
@@ -81,6 +85,31 @@ where
     }
 }
 
+/// Inserts a new node into the treap. Returns `None` if the nodes key already exists in the treap.
+/// 
+/// ## Arguments:
+/// 
+/// - nodes - A vector used to store the nodes in memory.
+/// - root - The index of the root node in the vector.
+/// - order - Ordering::Greater indicates a maximum treap, otherwise a minimum treap.
+/// - node - The new node to insert.
+/// 
+/// ## Example:
+/// 
+/// ```
+/// use rtreap::treap::{is_valid, insert, Node, TreapNode};
+/// use rtreap::bst::NIL;
+/// use std::cmp::Ordering::Greater;
+/// 
+/// type MyNode = TreapNode<usize, usize>;
+/// let values: [usize; 9] = [1,2,3,4,5,6,7,8,9];
+/// let mut treap: Vec<MyNode> = Vec::new();
+/// let mut root: usize = NIL;
+/// for v in values {
+///     insert(&mut treap, &mut root, Greater, MyNode::from((v,v)));
+/// }
+/// assert!(is_valid(&treap, root, Greater))
+/// ```
 pub fn insert<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, node: N) -> Option<()>
 where
     K: Ord + Copy,
@@ -95,6 +124,7 @@ where
     }
 }
 
+/// Updates the order of the nodes in the treap starting from `index` and going down the tree.
 pub fn push_down<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
@@ -194,7 +224,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy)]
-struct TreapNode<K, P>
+pub struct TreapNode<K, P>
 where
     K: Ord + Copy,
     P: Ord + Copy,
