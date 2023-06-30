@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use rand::prelude::*;
-    use rtreap::treap::{Treap as TreapTrait, BasicTreap};
+    use rtreap::treap::{BasicTreap, Treap as TreapTrait};
     use std::vec;
 
     const COUNT: usize = 1000;
@@ -20,10 +20,7 @@ mod tests {
             treap
                 .insert(*key, priority)
                 .expect("treap.insert() failed.");
-            assert!(
-                treap.is_valid(),
-                "heap priorities violated after insertion"
-            );
+            assert!(treap.is_valid(), "heap priorities violated after insertion");
         }
 
         //treap.inorder(0, print_key);

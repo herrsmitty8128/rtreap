@@ -30,7 +30,7 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     /// exists in the treap.
     fn insert(&mut self, key: K, priority: P) -> Option<()>;
 
-    /// Searches for the element containing `key`, removes it from the heap, 
+    /// Searches for the element containing `key`, removes it from the heap,
     /// and returns a tuple containing its key and priority or `None`
     /// if `key` does not exist in the heap.
     fn remove(&mut self, key: &K) -> Option<(K, P)>;
@@ -62,6 +62,20 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     }
 }
 
+pub fn build<K, P, N>(s: &[N], order: Ordering) -> (Vec<N>, usize)
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: Node<K, P> + From<N> + Copy,
+{
+    let mut nodes: Vec<N> = Vec::new();
+    let mut root: usize = bst::NIL;
+    for i in s {
+        insert(&mut nodes, &mut root, order, N::from(*i)).unwrap();
+    }
+    (nodes, root)
+}
+
 /// Updates the order of the nodes in the treap starting from `index` and going up the tree to the root.
 pub fn bubble_up<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize)
 where
@@ -86,29 +100,30 @@ where
 }
 
 /// Inserts a new node into the treap. Returns `None` if the nodes key already exists in the treap.
-/// 
+///
 /// ## Arguments:
-/// 
+///
 /// - nodes - A vector used to store the nodes in memory.
 /// - root - The index of the root node in the vector.
 /// - order - Ordering::Greater indicates a maximum treap, otherwise a minimum treap.
 /// - node - The new node to insert.
-/// 
+///
 /// ## Example:
-/// 
+///
 /// ```
 /// use rtreap::treap::{is_valid, insert, Node, TreapNode};
 /// use rtreap::bst::NIL;
 /// use std::cmp::Ordering::Greater;
-/// 
+///
 /// type MyNode = TreapNode<usize, usize>;
 /// let values: [usize; 9] = [1,2,3,4,5,6,7,8,9];
 /// let mut treap: Vec<MyNode> = Vec::new();
 /// let mut root: usize = NIL;
+/// 
 /// for v in values {
 ///     insert(&mut treap, &mut root, Greater, MyNode::from((v,v)));
+///     assert!(is_valid(&treap, root, Greater))
 /// }
-/// assert!(is_valid(&treap, root, Greater))
 /// ```
 pub fn insert<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, node: N) -> Option<()>
 where
