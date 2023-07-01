@@ -62,6 +62,33 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     }
 }
 
+/// Constructs a treap from a slice of objects that implement the
+/// `Node` trait and returns a tuple containing a vector of tree
+/// nodes and the index of the root node.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::treap::{build, insert, TreapNode, Node, is_valid};
+/// use rtreap::bst::NIL;
+/// use std::cmp::Ordering::Greater;
+/// use rand::prelude::*;
+///
+/// type MyNode = TreapNode<usize, usize>;
+/// 
+/// let mut values:Vec<MyNode> = Vec::new();
+/// let mut treap: Vec<MyNode> = Vec::new();
+/// let mut root: usize = NIL;
+/// 
+/// for i in 0..100 {
+///     let node = MyNode::from((rand::random(), rand::random()));
+///     values.push(node);
+/// }
+/// 
+/// let (mut treap, mut root) = build(&values, Greater);
+/// 
+/// assert!(is_valid(&treap, root, Greater));
+/// ```
 pub fn build<K, P, N>(s: &[N], order: Ordering) -> (Vec<N>, usize)
 where
     K: Ord + Copy,
@@ -99,7 +126,7 @@ where
     }
 }
 
-/// Inserts a new node into the treap. Returns `None` if the nodes key already exists in the treap.
+/// Inserts a new node into the treap. Returns `None` if the node's key already exists in the treap.
 ///
 /// ## Arguments:
 ///
@@ -161,6 +188,33 @@ where
     }
 }
 
+/// Removes and returns the element at `index` from the treap. Returns `None` if `index` is
+/// out of bounds or the treap is empty.
+/// 
+/// ## Example:
+/// 
+/// ```
+/// use rtreap::treap::{build, remove, insert, TreapNode, Node, is_valid};
+/// use rtreap::bst::NIL;
+/// use std::cmp::Ordering::Greater;
+/// use rand::prelude::*;
+///
+/// type MyNode = TreapNode<usize, usize>;
+/// 
+/// let mut treap: Vec<MyNode> = Vec::new();
+/// let mut root: usize = NIL;
+/// 
+/// for i in 0..100 {
+///     let node = MyNode::from((rand::random(), rand::random()));
+///     insert(&mut treap, &mut root, Greater, node);
+/// }
+/// 
+/// while !treap.is_empty() {
+///     assert!(is_valid(&treap, root, Greater));
+///     let index = rand::thread_rng().gen_range(0..treap.len());
+///     remove(&mut treap, &mut root, Greater, index);
+/// }
+/// ```
 pub fn remove<K, P, N>(
     nodes: &mut Vec<N>,
     root: &mut usize,
@@ -189,6 +243,9 @@ where
     }
 }
 
+/// Modifies the priority of an element on the treap in such a way that its
+/// ordering relative to other elements is changed. It returns `Some(P)`
+/// containing the old priority, or None if `key` does not exist in the treap.
 pub fn update<K, P, N>(
     nodes: &mut Vec<N>,
     root: &mut usize,
@@ -215,6 +272,7 @@ where
     }
 }
 
+/// Removes and returns the element on the top of the treap. Returns `None` if the Treap is empty.
 pub fn top<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering) -> Option<N>
 where
     K: Ord + Copy,
@@ -228,7 +286,8 @@ where
     }
 }
 
-/// Returns true if the properties of a heap and a bst hold true.
+/// Returns true if the properties of both a heap and a binary search tree hold true.
+/// This function is primarly used for testing.
 pub fn is_valid<K, P, N>(nodes: &Vec<N>, root: usize, order: Ordering) -> bool
 where
     K: Ord + Copy,
@@ -238,6 +297,12 @@ where
     !(root >= nodes.len() || !heap::is_valid(nodes, order, root) || !bst::is_valid(nodes, root))
 }
 
+/// An implementation of the [Node] trait.
+/// 
+/// ## Arguments:
+/// 
+/// - `K` is a generic type that represents the node's key.
+/// - `P` is a generic type that represents the node's priority. 
 #[derive(Debug, Clone, Copy)]
 pub struct TreapNode<K, P>
 where
@@ -333,6 +398,7 @@ where
     }
 }
 
+/// An implementation of the [Treap] trait.
 #[derive(Debug, Clone)]
 pub struct BasicTreap<K, P, const MAX_HEAP: bool>
 where

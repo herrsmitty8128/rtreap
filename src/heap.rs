@@ -3,7 +3,9 @@
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
 /*!
- * This module implements a priority queue as a heap. It supports:
+ * This module implements a priority queue as a heap.
+ * 
+ * It supports:
  *
  * - Maximum heaps
  * - Minimum heaps, without relying on [core::cmp::Reverse] or a custom [std::cmp::Ord] implementation
