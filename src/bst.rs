@@ -5,7 +5,7 @@
 /*!
  * This module contains a `Node` trait and a collection of functions designed to
  * perform operations on a binary search tree ("bst").
- * 
+ *
  * Supported operations include:
  *
  * - build (construct a new bst from a slice of keys)

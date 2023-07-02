@@ -75,18 +75,18 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
 /// use rand::prelude::*;
 ///
 /// type MyNode = TreapNode<usize, usize>;
-/// 
+///
 /// let mut values:Vec<MyNode> = Vec::new();
 /// let mut treap: Vec<MyNode> = Vec::new();
 /// let mut root: usize = NIL;
-/// 
+///
 /// for i in 0..100 {
 ///     let node = MyNode::from((rand::random(), rand::random()));
 ///     values.push(node);
 /// }
-/// 
+///
 /// let (mut treap, mut root) = build(&values, Greater);
-/// 
+///
 /// assert!(is_valid(&treap, root, Greater));
 /// ```
 pub fn build<K, P, N>(s: &[N], order: Ordering) -> (Vec<N>, usize)
@@ -146,7 +146,7 @@ where
 /// let values: [usize; 9] = [1,2,3,4,5,6,7,8,9];
 /// let mut treap: Vec<MyNode> = Vec::new();
 /// let mut root: usize = NIL;
-/// 
+///
 /// for v in values {
 ///     insert(&mut treap, &mut root, Greater, MyNode::from((v,v)));
 ///     assert!(is_valid(&treap, root, Greater))
@@ -190,9 +190,9 @@ where
 
 /// Removes and returns the element at `index` from the treap. Returns `None` if `index` is
 /// out of bounds or the treap is empty.
-/// 
+///
 /// ## Example:
-/// 
+///
 /// ```
 /// use rtreap::treap::{build, remove, insert, TreapNode, Node, is_valid};
 /// use rtreap::bst::NIL;
@@ -200,15 +200,15 @@ where
 /// use rand::prelude::*;
 ///
 /// type MyNode = TreapNode<usize, usize>;
-/// 
+///
 /// let mut treap: Vec<MyNode> = Vec::new();
 /// let mut root: usize = NIL;
-/// 
+///
 /// for i in 0..100 {
 ///     let node = MyNode::from((rand::random(), rand::random()));
 ///     insert(&mut treap, &mut root, Greater, node);
 /// }
-/// 
+///
 /// while !treap.is_empty() {
 ///     assert!(is_valid(&treap, root, Greater));
 ///     let index = rand::thread_rng().gen_range(0..treap.len());
@@ -243,14 +243,39 @@ where
     }
 }
 
-/// Modifies the priority of an element on the treap in such a way that its
+/// Modifies the priority of the element at `index` on the treap in such a way that its
 /// ordering relative to other elements is changed. It returns `Some(P)`
 /// containing the old priority, or None if `key` does not exist in the treap.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::treap::{build, update, insert, TreapNode, Node, is_valid};
+/// use rtreap::bst::{NIL, Node as BstNode};
+/// use std::cmp::Ordering::Greater;
+/// use rand::prelude::*;
+///
+/// type MyNode = TreapNode<usize, usize>;
+///
+/// let mut treap: Vec<MyNode> = Vec::new();
+/// let mut root: usize = NIL;
+///
+/// for i in 0..100 {
+///     let node = MyNode::from((rand::random(), rand::random()));
+///     insert(&mut treap, &mut root, Greater, node);
+/// }
+///
+/// for index in 0..treap.len() {
+///     let new_priority = rand::thread_rng().gen_range(0..treap.len());
+///     update(&mut treap, &mut root, Greater, index, new_priority);
+///     assert!(is_valid(&treap, root, Greater));
+/// }
+/// ```
 pub fn update<K, P, N>(
     nodes: &mut Vec<N>,
     root: &mut usize,
     order: Ordering,
-    key: &K,
+    index: usize,
     new_priority: P,
 ) -> Option<P>
 where
@@ -258,7 +283,7 @@ where
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    if let Some(index) = bst::search(nodes, *root, key) {
+    if index < nodes.len() {
         let old_priority: P = *nodes[index].priority();
         nodes[index].set_priority(new_priority);
         if new_priority.cmp(&old_priority) == order {
@@ -298,11 +323,11 @@ where
 }
 
 /// An implementation of the [Node] trait.
-/// 
+///
 /// ## Arguments:
-/// 
+///
 /// - `K` is a generic type that represents the node's key.
-/// - `P` is a generic type that represents the node's priority. 
+/// - `P` is a generic type that represents the node's priority.
 #[derive(Debug, Clone, Copy)]
 pub struct TreapNode<K, P>
 where
@@ -530,13 +555,17 @@ where
     }
 
     fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
-        update(
-            &mut self.treap,
-            &mut self.root,
-            self.order,
-            key,
-            new_priority,
-        )
+        if let Some(index) = bst::search(&self.treap, self.root, key) {
+            update(
+                &mut self.treap,
+                &mut self.root,
+                self.order,
+                index,
+                new_priority,
+            )
+        } else {
+            None
+        }
     }
 
     fn top(&mut self) -> Option<(K, P)> {

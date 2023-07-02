@@ -4,7 +4,7 @@
 
 /*!
  * This module implements a priority queue as a heap.
- * 
+ *
  * It supports:
  *
  * - Maximum heaps
