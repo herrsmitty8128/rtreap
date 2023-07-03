@@ -514,7 +514,7 @@ where
     /// This method is allowed to allocate for more elements than capacity.
     /// If capacity is 0, the heap will not allocate.
     /// It is important to note that although the returned heap has the minimum capacity specified, the heap will have a zero length.
-    /// If it is important to know the exact allocated capacity of a heap, always use the [`Heap::capacity`] method after construction.
+    /// If it is important to know the exact allocated capacity of a heap, always use the [Heap::capacity] method after construction.
     /// For heap where T is a zero-sized type, there will be no allocation and the capacity will always be [`usize::MAX`].
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -550,7 +550,7 @@ where
         self.heap.iter()
     }
 
-    /// Shortens the vector, keeping the first `len` elements and dropping the rest.
+    /// Shortens the underlying vector, keeping the first `len` elements and dropping the rest.
     /// If len is greater than the vector's current length, this has no effect.
     /// Note that this method has no effect on the allocated capacity of the vector.
     pub fn truncate(&mut self, len: usize) {
@@ -558,8 +558,8 @@ where
     }
 
     /// Returns the sort order of the heap.
-    /// `Ordering::Greater` indicates a maximum heap.
-    /// `Ordering::Less` indicates a minimum heap.
+    /// [Ordering::Greater] indicates a maximum heap.
+    /// [Ordering::Less] indicates a minimum heap.
     pub fn is_max_heap(&self) -> bool {
         self.order == Ordering::Greater
     }

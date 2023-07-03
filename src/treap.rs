@@ -97,8 +97,8 @@ where
 {
     let mut nodes: Vec<N> = Vec::new();
     let mut root: usize = bst::NIL;
-    for i in s {
-        insert(&mut nodes, &mut root, order, N::from(*i)).unwrap();
+    for node in s {
+        insert(&mut nodes, &mut root, order, *node);
     }
     (nodes, root)
 }
@@ -450,6 +450,7 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Creates, initializes, and returns a new treap object.
     pub fn new() -> Self {
         Self {
             treap: Vec::new(),
@@ -462,6 +463,12 @@ where
         }
     }
 
+    /// Constructs a new, empty treap with at least the specified capacity.
+    /// The treap will be able to hold at least capacity elements without reallocating.
+    /// This method is allowed to allocate for more elements than capacity.
+    /// If capacity is 0, the treap will not allocate.
+    /// It is important to note that although the returned treap has the minimum capacity specified, the treap will have a zero length.
+    /// If it is important to know the exact allocated capacity of a treap, always use the `capacity` method after construction.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             treap: Vec::with_capacity(capacity),
@@ -472,6 +479,41 @@ where
                 Ordering::Less
             },
         }
+    }
+
+    /// Returns the index of the root node in the underlying vector.
+    pub fn root(&self) -> usize {
+        self.root
+    }
+
+    /// Returns the number of elements the treap can hold without reallocating.
+    pub fn capacity(&self) -> usize {
+        self.treap.capacity()
+    }
+
+    /// Returns a slice containing the entire underlying vector.
+    pub fn as_slice(&self) -> &[TreapNode<K, P>] {
+        self.treap.as_slice()
+    }
+
+    /// Shortens the underlying vector, keeping the first `len` elements and dropping the rest.
+    /// If len is greater than the vector's current length, this has no effect.
+    /// Note that this method has no effect on the allocated capacity of the vector.
+    pub fn truncate(&mut self, len: usize) {
+        self.treap.truncate(len)
+    }
+
+    /// Returns the sort order of the heap.
+    /// [Ordering::Greater] indicates a maximum treap.
+    /// [Ordering::Less] indicates a minimum treap.
+    pub fn is_max_heap(&self) -> bool {
+        self.order == Ordering::Greater
+    }
+
+    /// Clears the treap, removing all elements.
+    /// Note that this method has no effect on the allocated capacity of the treap.
+    pub fn clear(&mut self) {
+        self.treap.clear()
     }
 
     /// Returns true if the correct priority is on top of the treap.
@@ -502,14 +544,18 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Returns the number of elements in the treap.
     fn len(&self) -> usize {
         self.treap.len()
     }
 
+    /// Returns `true` if the treap is empty.
     fn is_empty(&self) -> bool {
         self.treap.is_empty()
     }
 
+    /// Returns an immutable reference to a tuple containing the key and priority
+    /// of the node at the root of the treap, or `None` if the treap is empty.
     fn peek(&self) -> Option<&(K, P)> {
         if self.treap.is_empty() {
             None
@@ -518,6 +564,9 @@ where
         }
     }
 
+    /// Performs a binary serach on the Treap to locate the node containing `key`
+    /// and returns an immutable reference to a tuple containing its key and 
+    /// priority, or `None` if the key is not in the treap.
     fn search(&self, key: &K) -> Option<&(K, P)> {
         if let Some(i) = bst::search(&self.treap, self.root, key) {
             Some(self.treap[i].entry())
