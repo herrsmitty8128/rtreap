@@ -3,7 +3,19 @@
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
 /*!
- * Put crate documentation here...
+ *
+ * Memory allocations are designed to use a linear model, where nodes are stored
+ * consecutively in an array or vector, rather than allocating memory for each
+ * node separately on the heap. This has the advantage of reducing the number of
+ * allocations at a cost of possibly using more memory.
+ *
+ * Instead of pointers or references, usize indexes are used to indicate the location
+ * of a node in the array/vector. Therefore, nodes contain the usize index of both
+ * children and parent nodes. An invalid index (that is out of bounds) is treated as
+ * a sentinal/terminal value by all functions. The [bst::NIL] constant is provided in this
+ * module as a convenient way to help manage this. Keep in mind that you are responsible
+ * for keeping track of the index of the root node in the tree.
+ *
  */
 
 use crate::{bst, heap};
@@ -708,5 +720,165 @@ where
     /// ```
     fn top(&mut self) -> Option<(K, P)> {
         top(&mut self.treap, &mut self.root, self.order).map(|x| *x.entry())
+    }
+}
+
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+/****************************************************************************/
+
+pub struct RandomizedTreap<K>
+where
+    K: Ord + Copy,
+{
+    treap: BasicTreap<K, usize, true>,
+}
+
+impl<K> Default for RandomizedTreap<K>
+where
+    K: Ord + Copy,
+{
+    /// Creates a new `RandomizedTreap` object.
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K> RandomizedTreap<K>
+where
+    K: Ord + Copy,
+{
+    /// Creates, initializes, and returns a new [BasicTreap] object.
+    pub fn new() -> Self {
+        Self {
+            treap: BasicTreap::new(),
+        }
+    }
+
+    /// Constructs a new, empty treap with at least the specified capacity.
+    /// The treap will be able to hold at least capacity elements without reallocating.
+    /// This method is allowed to allocate for more elements than capacity.
+    /// If capacity is 0, the treap will not allocate.
+    /// It is important to note that although the returned treap has the minimum capacity specified, the treap will have a zero length.
+    /// If it is important to know the exact allocated capacity of a treap, always use the `capacity` method after construction.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            treap: BasicTreap::with_capacity(capacity),
+        }
+    }
+
+    /// Returns the index of the root node in the underlying vector.
+    pub fn root(&self) -> usize {
+        self.treap.root()
+    }
+
+    /// Returns the number of elements the treap can hold without reallocating.
+    pub fn capacity(&self) -> usize {
+        self.treap.capacity()
+    }
+
+    /// Shortens the underlying vector, keeping the first `len` elements and dropping the rest.
+    /// If len is greater than the vector's current length, this has no effect.
+    /// Note that this method has no effect on the allocated capacity of the vector.
+    pub fn truncate(&mut self, len: usize) {
+        self.treap.truncate(len)
+    }
+
+    /// Clears the treap, removing all elements.
+    /// Note that this method has no effect on the allocated capacity of the treap.
+    pub fn clear(&mut self) {
+        self.treap.clear()
+    }
+
+    /// Returns true if the correct priority is on top of the treap.
+    /// Please note that this function is intended for use during testing.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// use rtreap::treap::{Treap as TreapTrait, BasicTreap};
+    /// use std::cmp::Ordering;
+    ///
+    /// let mut v: Vec<usize> = Vec::new();
+    /// let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
+    /// treap.insert(1, 234);
+    /// treap.insert(333, 21);
+    /// treap.insert(74, 12);
+    /// treap.insert(559, 32);
+    /// assert!(treap.is_valid());
+    /// ```
+    #[doc(hidden)]
+    pub fn is_valid(&self) -> bool {
+        self.treap.is_valid()
+    }
+
+    /// Returns the number of elements in the treap.
+    pub fn len(&self) -> usize {
+        self.treap.len()
+    }
+
+    /// Returns `true` if the treap is empty.
+    pub fn is_empty(&self) -> bool {
+        self.treap.is_empty()
+    }
+
+    /// Performs a binary serach on the Treap to locate the node containing `key`
+    /// and returns an immutable reference to a tuple containing its key and
+    /// priority, or `None` if the key is not in the treap.
+    pub fn search(&self, key: &K) -> Option<&K> {
+        if let Some(x) = self.treap.search(key) {
+            Some(&x.0)
+        } else {
+            None
+        }
+    }
+
+    /// Inserts a new node containing `key` and `priority` into the treap.
+    ///
+    /// ## Examples:
+    ///
+    /// ```
+    /// use rtreap::treap::{Treap as TreapTrait, BasicTreap};
+    ///
+    /// let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
+    /// assert!(treap.insert(123, 456).is_some(), "Treap insertion failed.");
+    /// ```
+    pub fn insert(&mut self, key: K) -> Option<()> {
+        self.treap.insert(key, rand::random::<usize>())
+    }
+
+    /// Removes the node containing `key` from the treap and returns a tuple
+    /// containing its key and priority. Returns None if `key` does not exist
+    /// in the treap.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// use rtreap::treap::{BasicTreap, Treap};
+    /// use rand::prelude::*;
+    ///
+    /// const COUNT: usize = 100;
+    ///
+    /// let mut treap: BasicTreap<usize, usize, true> = BasicTreap::new();
+    /// let mut keys: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
+    /// let mut priorities: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
+    ///
+    /// for i in 0..COUNT {
+    ///     treap.insert(keys[i], priorities[i]);
+    /// }
+    ///
+    /// for k in keys {
+    ///     assert!(treap.is_valid());
+    ///     assert!(treap.remove(&k).is_some());
+    /// }
+    /// ```
+    pub fn remove(&mut self, key: &K) -> Option<K> {
+        if let Some(x) = self.treap.remove(key) {
+            Some(x.0)
+        } else {
+            None
+        }
     }
 }
