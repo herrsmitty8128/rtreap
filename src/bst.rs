@@ -78,6 +78,7 @@ where
     fn key(&self) -> &K;
 }
 
+/*
 pub trait BinarySearchTree<K, N>
 where
     K: Ord + Copy,
@@ -93,6 +94,7 @@ where
         self.len() == 0
     }
 }
+*/
 
 /// A general purpose binary tree node that implements the `Node` trait
 /// and can be used with the functions contained in the `bst` module.

@@ -212,7 +212,7 @@ where
 /// while !treap.is_empty() {
 ///     assert!(is_valid(&treap, root, Greater));
 ///     let index = rand::thread_rng().gen_range(0..treap.len());
-///     remove(&mut treap, &mut root, Greater, index);
+///     assert!(remove(&mut treap, &mut root, Greater, index).is_some());
 /// }
 /// ```
 pub fn remove<K, P, N>(
