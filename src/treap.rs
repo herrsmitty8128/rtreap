@@ -30,23 +30,23 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
     /// exists in the treap.
     fn insert(&mut self, key: K, priority: P) -> Option<()>;
 
-    /// Searches for the element containing `key`, removes it from the heap,
+    /// Searches for the element containing `key`, removes it from the treap,
     /// and returns a tuple containing its key and priority or `None`
-    /// if `key` does not exist in the heap.
+    /// if `key` does not exist in the treap.
     fn remove(&mut self, key: &K) -> Option<(K, P)>;
 
     /// Searches for the element containing `key`, sets is priority to `new_priority`,
-    /// and returns the old priority or `None` if `key` does not exist in the heap.
+    /// and returns the old priority or `None` if `key` does not exist in the treap.
     fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
         None // update does not apply to all types of treaps
     }
 
-    /// Removes and returns the element on the top of the heap in the form of a tuple containing
-    /// the removed node's key and priority or `None` if the heap is empty.
+    /// Removes and returns the element on the top of the treap in the form of a tuple containing
+    /// the removed node's key and priority or `None` if the treap is empty.
     fn top(&mut self) -> Option<(K, P)>;
 
     /// Returns an immutable reference to a tuple containing the key and value of the node on top
-    /// of the heap without removing it or `None` if the heap is empty.
+    /// of the treap without removing it or `None` if the treap is empty.
     fn peek(&self) -> Option<&(K, P)>;
 
     /// Performs a binary search for `key` and returns an immutable reference to a tuple
