@@ -345,6 +345,7 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Creates and initializes a new node with a tuplie containing a key and priority.
     fn from(entry: (K, P)) -> Self {
         Self {
             parent: bst::NIL,
@@ -360,11 +361,13 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Returns an immutable reference to the node's priority.
     #[inline]
     fn priority(&self) -> &P {
         &self.entry.1
     }
 
+    /// Sets the nodes' priority to `new_priority`.
     #[inline]
     fn set_priority(&mut self, new_priority: P) {
         self.entry.1 = new_priority;
@@ -376,6 +379,7 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Returns an immutable reference to a tuple containing the node's key and priority.
     #[inline]
     fn entry(&self) -> &(K, P) {
         &self.entry
@@ -387,43 +391,50 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Returns an immutable reference to the node's key.
     #[inline]
     fn key(&self) -> &K {
         &self.entry.0
     }
 
+    /// Returns the index of the node's left child.
     #[inline]
     fn left(&self) -> usize {
         self.left
     }
 
+    /// Returns the index of the node's right child.
     #[inline]
     fn right(&self) -> usize {
         self.right
     }
 
+    /// Returns the index of the node's parent.
     #[inline]
     fn parent(&self) -> usize {
         self.parent
     }
 
+    /// Sets the index of the node's left child.
     #[inline]
     fn set_left(&mut self, l: usize) {
         self.left = l;
     }
 
+    /// Sets the index of the node's parent.
     #[inline]
     fn set_parent(&mut self, p: usize) {
         self.parent = p;
     }
 
+    /// Sets the index of the node's right child.
     #[inline]
     fn set_right(&mut self, r: usize) {
         self.right = r;
     }
 }
 
-/// An implementation of the [Treap] trait.
+/// An implementation of an ordinary treap using the [Treap] trait.
 #[derive(Debug, Clone)]
 pub struct BasicTreap<K, P, const MAX_HEAP: bool>
 where
@@ -440,6 +451,7 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
+    /// Creates a new `BasicTreap` object.
     fn default() -> Self {
         Self::new()
     }
@@ -450,7 +462,7 @@ where
     K: Ord + Copy,
     P: Ord + Copy,
 {
-    /// Creates, initializes, and returns a new treap object.
+    /// Creates, initializes, and returns a new [BasicTreap] object.
     pub fn new() -> Self {
         Self {
             treap: Vec::new(),
@@ -565,7 +577,7 @@ where
     }
 
     /// Performs a binary serach on the Treap to locate the node containing `key`
-    /// and returns an immutable reference to a tuple containing its key and 
+    /// and returns an immutable reference to a tuple containing its key and
     /// priority, or `None` if the key is not in the treap.
     fn search(&self, key: &K) -> Option<&(K, P)> {
         if let Some(i) = bst::search(&self.treap, self.root, key) {
@@ -594,6 +606,31 @@ where
         )
     }
 
+    /// Removes the node containing `key` from the treap and returns a tuple
+    /// containing its key and priority. Returns None if `key` does not exist
+    /// in the treap.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// use rtreap::treap::{BasicTreap, Treap};
+    /// use rand::prelude::*;
+    ///
+    /// const COUNT: usize = 100;
+    ///
+    /// let mut treap: BasicTreap<usize, usize, true> = BasicTreap::new();
+    /// let mut keys: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
+    /// let mut priorities: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
+    ///
+    /// for i in 0..COUNT {
+    ///     treap.insert(keys[i], priorities[i]);
+    /// }
+    ///
+    /// for k in keys {
+    ///     assert!(treap.is_valid());
+    ///     assert!(treap.remove(&k).is_some());
+    /// }
+    /// ```
     fn remove(&mut self, key: &K) -> Option<(K, P)> {
         if let Some(index) = bst::search(&self.treap, self.root, key) {
             if let Some(node) = remove(&mut self.treap, &mut self.root, self.order, index) {
@@ -603,6 +640,32 @@ where
         None
     }
 
+    /// Removes the node containing `key` from the treap and returns a tuple
+    /// containing its key and priority. Returns None if `key` does not exist
+    /// in the treap.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// use rtreap::treap::{BasicTreap, Treap};
+    /// use rand::prelude::*;
+    ///
+    /// const COUNT: usize = 100;
+    ///
+    /// let mut treap: BasicTreap<usize, usize, true> = BasicTreap::new();
+    /// let mut keys: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
+    /// let mut priorities: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
+    ///
+    /// for i in 0..COUNT {
+    ///     treap.insert(keys[i], priorities[i]);
+    /// }
+    ///
+    /// for k in keys {
+    ///     let new_priority = rand::random::<usize>();
+    ///     assert!(treap.update(&k, new_priority).is_some());
+    ///     assert!(treap.is_valid());
+    /// }
+    /// ```
     fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
         if let Some(index) = bst::search(&self.treap, self.root, key) {
             update(
@@ -617,6 +680,32 @@ where
         }
     }
 
+    /// Removes the node containing `key` from the treap and returns a tuple
+    /// containing its key and priority. Returns None if `key` does not exist
+    /// in the treap.
+    ///
+    /// ## Example:
+    ///
+    /// ```
+    /// use rtreap::treap::{BasicTreap, Treap};
+    /// use rand::prelude::*;
+    ///
+    /// const COUNT: usize = 100;
+    ///
+    /// let mut treap: BasicTreap<usize, usize, true> = BasicTreap::new();
+    ///
+    /// for i in 0..COUNT {
+    ///     treap.insert(rand::random::<usize>(), rand::random::<usize>());
+    /// }
+    ///
+    /// while !treap.is_empty() {
+    ///     let begin_len = treap.len();
+    ///     assert!(treap.is_valid());
+    ///     assert!(treap.top().is_some());
+    ///     let end_len = treap.len();
+    ///     assert!(begin_len - end_len == 1);
+    /// }
+    /// ```
     fn top(&mut self) -> Option<(K, P)> {
         top(&mut self.treap, &mut self.root, self.order).map(|x| *x.entry())
     }
