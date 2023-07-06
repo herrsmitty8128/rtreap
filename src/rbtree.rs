@@ -84,20 +84,50 @@ where
     nodes[*root].set_black();
 }
 
-fn transplant<K, T>(nodes: &mut [T], root: &mut usize, node: T, child: T)
-where
-    K: Ord + Copy,
-    T: Node<K>,
-{
-    // need to implement
-}
-
-fn delete_fixup<K, T>(nodes: &mut [T], index: usize)
+fn delete_loop<K, T>(nodes: &mut [T], root: usize, index: usize) -> Option<(usize, usize)>
 where
     K: Ord,
     T: Node<K>,
 {
-    // need to implement
+    let len: usize = nodes.len();
+    if index < len && index != root && nodes[index].is_black() {
+        Some((nodes[index].parent(), len))
+    } else {
+        None
+    }
+}
+
+fn delete_fixup<K, T>(nodes: &mut [T], root: usize, mut index: usize)
+where
+    K: Ord,
+    T: Node<K>,
+{
+    while let Some((p, len)) = delete_loop(nodes, root, index) {
+        if index == nodes[p].left() {
+            let w: usize = nodes[p].right();
+            if w < len {
+                if nodes[w].is_red() {
+
+                }
+                let l: usize = nodes[w].left();
+                let r: usize = nodes[w].right();
+                if (l >= len || nodes[l].is_black()) && (r >= len || nodes[r].is_black()) {
+                    nodes[w].set_red();
+                    index = p;
+                } else {
+                    if r >= len || nodes[r].is_black() {
+
+                    }
+                }
+            }
+        } else {
+            let w: usize = nodes[p].left();
+            if w < len {
+                
+            }
+        }
+    }
+    nodes[index].set_black();
 }
 
 /*

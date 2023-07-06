@@ -520,13 +520,6 @@ where
         self.treap.as_slice()
     }
 
-    /// Shortens the underlying vector, keeping the first `len` elements and dropping the rest.
-    /// If len is greater than the vector's current length, this has no effect.
-    /// Note that this method has no effect on the allocated capacity of the vector.
-    pub fn truncate(&mut self, len: usize) {
-        self.treap.truncate(len)
-    }
-
     /// Returns the sort order of the heap.
     /// [Ordering::Greater] indicates a maximum treap.
     /// [Ordering::Less] indicates a minimum treap.
@@ -540,7 +533,7 @@ where
         self.treap.clear()
     }
 
-    /// Returns true if the correct priority is on top of the treap.
+    /// Returns `true` if the correct priority is on top of the treap.
     /// Please note that this function is intended for use during testing.
     ///
     /// ## Example:
@@ -729,6 +722,19 @@ where
 /****************************************************************************/
 /****************************************************************************/
 
+/// An implementation of a randomized treap.
+/// 
+/// This struct is implemented as a wrapper around a [BasicTreap] object, which automatically
+/// assigns a random priority to each node with the aim of self-balancing the tree.
+/// 
+/// Nodes in this treap store both the key and priority. The key is provided as generic parameter
+/// `K` but the priority is automatically assigned by using the [rand::random] function.This approach
+/// has the advantage of not needing to calculate the priority for each node when making changes to
+/// the treap, however, at the cost of using more memory.
+/// 
+/// The interface for this implementation is slightly different than [BasicTreap] because several
+/// of the methods that are common to a treap are not applicable to a randomized treap by its nature.
+/// These include `peek`, `top`, and `update`.
 pub struct RandomizedTreap<K>
 where
     K: Ord + Copy,
@@ -779,13 +785,6 @@ where
         self.treap.capacity()
     }
 
-    /// Shortens the underlying vector, keeping the first `len` elements and dropping the rest.
-    /// If len is greater than the vector's current length, this has no effect.
-    /// Note that this method has no effect on the allocated capacity of the vector.
-    pub fn truncate(&mut self, len: usize) {
-        self.treap.truncate(len)
-    }
-
     /// Clears the treap, removing all elements.
     /// Note that this method has no effect on the allocated capacity of the treap.
     pub fn clear(&mut self) {
@@ -824,9 +823,8 @@ where
         self.treap.is_empty()
     }
 
-    /// Performs a binary serach on the Treap to locate the node containing `key`
-    /// and returns an immutable reference to a tuple containing its key and
-    /// priority, or `None` if the key is not in the treap.
+    /// Performs a binary serach on the Treap to locate the node containing `key` and 
+    /// returns an immutable reference to its key, or `None` if the key is not in the treap.
     pub fn search(&self, key: &K) -> Option<&K> {
         if let Some(x) = self.treap.search(key) {
             Some(&x.0)
@@ -835,7 +833,7 @@ where
         }
     }
 
-    /// Inserts a new node containing `key` and `priority` into the treap.
+    /// Inserts a new node containing `key` into the treap.
     ///
     /// ## Examples:
     ///
@@ -849,9 +847,8 @@ where
         self.treap.insert(key, rand::random::<usize>())
     }
 
-    /// Removes the node containing `key` from the treap and returns a tuple
-    /// containing its key and priority. Returns None if `key` does not exist
-    /// in the treap.
+    /// Removes the node containing `key` from the treap and returns the removed node's key.
+    /// Returns None if `key` does not exist in the treap.
     ///
     /// ## Example:
     ///
@@ -879,6 +876,16 @@ where
             Some(x.0)
         } else {
             None
+        }
+    }
+
+    /// This method attempts to rebalance the tree by iterating over each node, 
+    /// assigning a new random priority, and updating its order relative to the
+    /// other nodes in the tree.
+    pub fn rebalance(&mut self) {
+        for index in 0..self.len() {
+            let new_priority: usize = rand::random();
+            update(&mut self.treap.treap, &mut self.treap.root, self.treap.order, index, new_priority);
         }
     }
 }
