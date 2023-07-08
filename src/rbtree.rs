@@ -106,25 +106,19 @@ where
         if index == nodes[p].left() {
             let w: usize = nodes[p].right();
             if w < len {
-                if nodes[w].is_red() {
-
-                }
+                if nodes[w].is_red() {}
                 let l: usize = nodes[w].left();
                 let r: usize = nodes[w].right();
                 if (l >= len || nodes[l].is_black()) && (r >= len || nodes[r].is_black()) {
                     nodes[w].set_red();
                     index = p;
                 } else {
-                    if r >= len || nodes[r].is_black() {
-
-                    }
+                    if r >= len || nodes[r].is_black() {}
                 }
             }
         } else {
             let w: usize = nodes[p].left();
-            if w < len {
-                
-            }
+            if w < len {}
         }
     }
     nodes[index].set_black();
