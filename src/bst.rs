@@ -303,20 +303,30 @@ where
 }
 
 /// Removes the node located at `index` from both the tree and the vector `nodes`
-/// and returns its key. Returns Err(Error) if `index` is out of bounds.
+/// and returns it. Returns Err(Error) if `index` is out of bounds.
 ///
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, NIL, remove, build};
+/// use rtreap::bst::{TreeNode, Node, NIL, remove, insert, is_valid};
+/// use rand::prelude::*;
 ///
-/// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
-/// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
+/// let mut nodes: Vec<TreeNode<usize>> = Vec::new();
+/// let mut root: usize = NIL;
 ///
-/// for i in (0..nodes.len()).rev() {
+/// for i in 0..1000 {
+///     let node = TreeNode::from(rand::random::<usize>());
+///     insert(&mut nodes, &mut root, node);
+/// }
+///
+/// while !nodes.is_empty() {
 ///     assert!(root != NIL);
 ///     assert!(!nodes.is_empty());
-///     remove(&mut nodes, &mut root, i).unwrap();
+///     assert!(is_valid(&nodes, root), "Tree is not valid");
+///     let beg_len: usize = nodes.len();
+///     let index = rand::thread_rng().gen_range(0..nodes.len());
+///     remove(&mut nodes, &mut root, index).unwrap();
+///     assert!(beg_len - nodes.len() == 1);
 /// }
 ///
 /// assert!(nodes.is_empty(), "Failed to remove all nodes.");
@@ -331,9 +341,20 @@ where
     if index < len {
         let r: usize = nodes[index].right();
         let l: usize = nodes[index].left();
-        if l >= len {
+        if l >= len && r >= len {    // leaf node
+            if index == *root {
+                *root = NIL;
+            } else {
+                let p: usize = nodes[index].parent();
+                if index == nodes[p].left() {
+                    nodes[p].set_left(NIL);
+                } else {
+                    nodes[p].set_right(NIL);
+                }
+            }
+        } else if l >= len && r < len {
             transplant(nodes, root, index, r);
-        } else if r >= len {
+        } else if l < len && r >= len {
             transplant(nodes, root, index, l);
         } else {
             let y: usize = minimum(nodes, r).unwrap(); // should never panic
@@ -867,17 +888,13 @@ where
     K: Ord,
     T: Node<K>,
 {
-    if root >= nodes.len() {
-        false
-    } else if let Some(mut prev) = minimum(nodes, root) {
+    if let Some(mut prev) = minimum(nodes, root) {
         while let Some(next) = in_order_next(nodes, prev) {
             if *nodes[prev].key() > *nodes[next].key() {
                 return false;
             };
             prev = next;
         }
-        true
-    } else {
-        false
-    }
+    } 
+    true
 }

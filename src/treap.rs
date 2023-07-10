@@ -238,8 +238,7 @@ where
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    while let Some(child_index) = get_child(nodes, nodes[index].left(), order, nodes[index].right())
-    {
+    while let Some(child_index) = get_child(nodes, nodes[index].left(), order, nodes[index].right()) {
         if nodes[child_index].priority().cmp(nodes[index].priority()) == order {
             if child_index == nodes[index].right() {
                 rotate_left(nodes, root, index);
@@ -272,11 +271,15 @@ where
 ///     let node = MyNode::from((rand::random(), rand::random()));
 ///     insert(&mut treap, &mut root, Greater, node);
 /// }
+/// 
+/// assert!(is_valid(&treap, root, Greater), "Insertion did not produce a valid treap.");
 ///
 /// while !treap.is_empty() {
-///     assert!(is_valid(&treap, root, Greater));
 ///     let index = rand::thread_rng().gen_range(0..treap.len());
-///     assert!(remove(&mut treap, &mut root, Greater, index).is_some());
+///     assert!(index < treap.len());
+///     assert!(root < treap.len());
+///     assert!(remove(&mut treap, &mut root, Greater, index).is_some(), "Treap removal failed");
+///     assert!(is_valid(&treap, root, Greater), "Treap properties violated after removal of node");
 /// }
 /// ```
 pub fn remove<K, P, N>(
@@ -290,20 +293,41 @@ where
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    if index >= nodes.len() {
-        None
-    } else if nodes.len() == 1 {
-        *root = bst::NIL;
-        Some(nodes.pop().unwrap()) // should never panic
-    } else {
-        push_down(nodes, root, order, index);
-        let p: usize = nodes[index].parent();
-        if nodes[p].left() == index {
-            nodes[p].set_left(bst::NIL);
+    let len: usize = nodes.len();
+    if index < len {
+        let r: usize = nodes[index].right();
+        let l: usize = nodes[index].left();
+        if l >= len && r >= len {    // leaf node
+            if index == *root {
+                *root = bst::NIL;
+            } else {
+                let p: usize = nodes[index].parent();
+                if index == nodes[p].left() {
+                    nodes[p].set_left(bst::NIL);
+                } else {
+                    nodes[p].set_right(bst::NIL);
+                }
+            }
+        } else if l >= len && r < len {
+            bst::transplant(nodes, root, index, r);
+        } else if l < len && r >= len {
+            bst::transplant(nodes, root, index, l);
         } else {
-            nodes[p].set_right(bst::NIL);
+            let y: usize = bst::minimum(nodes, r).unwrap(); // should never panic
+            if y != r {
+                let yr = nodes[y].right();
+                bst::transplant(nodes, root, y, yr);
+                nodes[y].set_right(r);
+                nodes[r].set_parent(y);
+            }
+            bst::transplant(nodes, root, index, y);
+            nodes[y].set_left(l);
+            nodes[l].set_parent(y);
+            push_down(nodes, root, order, y);
         }
         bst::swap_remove(nodes, root, index)
+    } else {
+        None
     }
 }
 
@@ -386,7 +410,7 @@ where
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    !(root >= nodes.len() || !heap::is_valid(nodes, order, root) || !bst::is_valid(nodes, root))
+    heap::is_valid(nodes, order, root) && bst::is_valid(nodes, root)
 }
 
 /// An implementation of the [Node] trait.
