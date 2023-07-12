@@ -282,7 +282,7 @@ where
 ///     let index = rand::thread_rng().gen_range(0..treap.len());
 ///     assert!(index < treap.len());
 ///     assert!(root < treap.len());
-///     assert!(remove(&mut treap, &mut root, Greater, index).is_some(), "Treap removal failed");
+///     remove(&mut treap, &mut root, Greater, index);
 ///     assert!(is_valid(&treap, root, Greater), "Treap properties violated after removal of node");
 /// }
 /// ```
@@ -402,7 +402,7 @@ where
     if nodes.is_empty() {
         None
     } else {
-        remove(nodes, root, order, *root)
+        Some(remove(nodes, root, order, *root))
     }
 }
 
@@ -757,9 +757,8 @@ where
     /// ```
     fn remove(&mut self, key: &K) -> Option<(K, P)> {
         if let Some(index) = bst::search(&self.treap, self.root, key) {
-            if let Some(node) = remove(&mut self.treap, &mut self.root, self.order, index) {
+            let node = remove(&mut self.treap, &mut self.root, self.order, index);
                 return Some(*node.entry());
-            }
         }
         None
     }
