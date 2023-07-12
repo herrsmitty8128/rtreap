@@ -253,6 +253,10 @@ where
 
 /// Removes and returns the element at `index` from the treap. Returns `None` if `index` is
 /// out of bounds or the treap is empty.
+/// 
+/// ## Panics:
+/// 
+/// Panics if `index` is out of bounds.
 ///
 /// ## Example:
 ///
@@ -287,48 +291,48 @@ pub fn remove<K, P, N>(
     root: &mut usize,
     order: Ordering,
     index: usize,
-) -> Option<N>
+) -> N
 where
     K: Ord + Copy,
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    let len: usize = nodes.len();
-    if index < len {
-        let r: usize = nodes[index].right();
-        let l: usize = nodes[index].left();
-        if l >= len && r >= len {    // leaf node
-            if index == *root {
-                *root = bst::NIL;
-            } else {
-                let p: usize = nodes[index].parent();
-                if index == nodes[p].left() {
-                    nodes[p].set_left(bst::NIL);
-                } else {
-                    nodes[p].set_right(bst::NIL);
-                }
-            }
-        } else if l >= len && r < len {
-            bst::transplant(nodes, root, index, r);
-        } else if l < len && r >= len {
-            bst::transplant(nodes, root, index, l);
+    /*let len: usize = nodes.len();
+    let r: usize = nodes[index].right();
+    let l: usize = nodes[index].left();
+    if l >= len && r >= len {    // leaf node
+        if index == *root {
+            *root = bst::NIL;
         } else {
-            let y: usize = bst::minimum(nodes, r).unwrap(); // should never panic
-            if y != r {
-                let yr = nodes[y].right();
-                bst::transplant(nodes, root, y, yr);
-                nodes[y].set_right(r);
-                nodes[r].set_parent(y);
+            let p: usize = nodes[index].parent();
+            if index == nodes[p].left() {
+                nodes[p].set_left(bst::NIL);
+            } else {
+                nodes[p].set_right(bst::NIL);
             }
-            bst::transplant(nodes, root, index, y);
-            nodes[y].set_left(l);
-            nodes[l].set_parent(y);
-            push_down(nodes, root, order, y);
         }
-        bst::swap_remove(nodes, root, index)
+    } else if l >= len && r < len {
+        bst::transplant(nodes, root, index, r);
+    } else if l < len && r >= len {
+        bst::transplant(nodes, root, index, l);
     } else {
-        None
+        let y: usize = bst::minimum(nodes, r).unwrap(); // should never panic
+        if y != r {
+            let yr = nodes[y].right();
+            bst::transplant(nodes, root, y, yr);
+            nodes[y].set_right(r);
+            nodes[r].set_parent(y);
+        }
+        bst::transplant(nodes, root, index, y);
+        nodes[y].set_left(l);
+        nodes[l].set_parent(y);
+        push_down(nodes, root, order, y);
     }
+    bst::swap_remove(nodes, root, index)*/
+    if let Some(i) = bst::tree_remove(nodes, root, index) {
+        push_down(nodes, root, order, i);
+    }
+    bst::swap_remove(nodes, root, index)
 }
 
 /// Modifies the priority of the element at `index` on the treap in such a way that its

@@ -186,6 +186,10 @@ where
 /// Removes the node located at `index` from the vector `nodes` and returns it.
 /// The removed node is replaced by the last node in the vector.
 /// It does not remove the node from the tree.
+/// 
+/// ## Panics:
+/// 
+/// Panics if `index` is out of bounds.
 ///
 /// ## Example:
 ///
@@ -225,38 +229,34 @@ where
 /// }
 ///
 /// ```
-pub fn swap_remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> Option<N>
+pub fn swap_remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> N
 where
     N: Node<K>,
 {
     let len: usize = nodes.len();
-    if index < len {
-        let n: usize = len - 1; // get the index of the last node
-        if n != index {
-            let p: usize = nodes[n].parent();
-            let l: usize = nodes[n].left();
-            let r: usize = nodes[n].right();
-            if p < len {
-                if nodes[p].left() == n {
-                    nodes[p].set_left(index);
-                } else {
-                    nodes[p].set_right(index);
-                }
-            }
-            if l < len {
-                nodes[l].set_parent(index);
-            }
-            if r < len {
-                nodes[r].set_parent(index);
-            }
-            if n == *root {
-                *root = index;
+    let n: usize = len - 1; // get the index of the last node
+    if n != index {
+        let p: usize = nodes[n].parent();
+        let l: usize = nodes[n].left();
+        let r: usize = nodes[n].right();
+        if p < len {
+            if nodes[p].left() == n {
+                nodes[p].set_left(index);
+            } else {
+                nodes[p].set_right(index);
             }
         }
-        Some(nodes.swap_remove(index))
-    } else {
-        None
+        if l < len {
+            nodes[l].set_parent(index);
+        }
+        if r < len {
+            nodes[r].set_parent(index);
+        }
+        if n == *root {
+            *root = index;
+        }
     }
+    nodes.swap_remove(index)
 }
 
 /// Removes the node at index `dst` from the tree by replacing it with node at index `src`.
@@ -302,13 +302,18 @@ where
     }
 }
 
-/// Removes the node located at `index` from both the tree and the vector `nodes`
-/// and returns it. Returns Err(Error) if `index` is out of bounds.
+/// Removes the node located at `index` from the tree but not the vector `nodes`
+/// and returns the index of the node that replaced it in the tree.
+/// Returns Err(Error) if `index` is out of bounds.
+/// 
+/// ## Panics:
+/// 
+/// Panics if `index` is out of bounds.
 ///
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, NIL, remove, insert, is_valid};
+/// use rtreap::bst::{TreeNode, Node, NIL, remove, insert, is_valid, swap_remove};
 /// use rand::prelude::*;
 ///
 /// let mut nodes: Vec<TreeNode<usize>> = Vec::new();
@@ -325,53 +330,66 @@ where
 ///     assert!(is_valid(&nodes, root), "Tree is not valid");
 ///     let beg_len: usize = nodes.len();
 ///     let index = rand::thread_rng().gen_range(0..nodes.len());
-///     remove(&mut nodes, &mut root, index).unwrap();
+///     remove(&mut nodes, &mut root, index);
 ///     assert!(beg_len - nodes.len() == 1);
 /// }
 ///
 /// assert!(nodes.is_empty(), "Failed to remove all nodes.");
 /// assert!(root == NIL, "root is not NIL.");
 /// ```
-pub fn remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> Option<N>
+pub fn tree_remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     N: Node<K>,
 {
     let len: usize = nodes.len();
-    if index < len {
-        let r: usize = nodes[index].right();
-        let l: usize = nodes[index].left();
-        if l >= len && r >= len {    // leaf node
-            if index == *root {
-                *root = NIL;
-            } else {
-                let p: usize = nodes[index].parent();
-                if index == nodes[p].left() {
-                    nodes[p].set_left(NIL);
-                } else {
-                    nodes[p].set_right(NIL);
-                }
-            }
-        } else if l >= len && r < len {
-            transplant(nodes, root, index, r);
-        } else if l < len && r >= len {
-            transplant(nodes, root, index, l);
+    let r: usize = nodes[index].right();
+    let l: usize = nodes[index].left();
+    if l >= len && r >= len {    // leaf node
+        if index == *root {
+            *root = NIL;
         } else {
-            let y: usize = minimum(nodes, r).unwrap(); // should never panic
-            if y != r {
-                let yr = nodes[y].right();
-                transplant(nodes, root, y, yr);
-                nodes[y].set_right(r);
-                nodes[r].set_parent(y);
+            let p: usize = nodes[index].parent();
+            if index == nodes[p].left() {
+                nodes[p].set_left(NIL);
+            } else {
+                nodes[p].set_right(NIL);
             }
-            transplant(nodes, root, index, y);
-            nodes[y].set_left(l);
-            nodes[l].set_parent(y);
         }
-        swap_remove(nodes, root, index)
-    } else {
         None
+    } else if l >= len && r < len {  // only the right child exists
+        transplant(nodes, root, index, r);
+        Some(r)
+    } else if l < len && r >= len {  // only the left child exists
+        transplant(nodes, root, index, l);
+        Some(l)
+    } else {  // both children exist
+        let y: usize = minimum(nodes, r).unwrap(); // should never panic
+        if y != r {
+            let yr = nodes[y].right();
+            transplant(nodes, root, y, yr);
+            nodes[y].set_right(r);
+            nodes[r].set_parent(y);
+        }
+        transplant(nodes, root, index, y);
+        nodes[y].set_left(l);
+        nodes[l].set_parent(y);
+        Some(y)
     }
+}
+
+/// Removes the node at `index` from both the tree and the vector.
+/// 
+/// ## Panics:
+/// 
+/// Panics if `index` is out of bounds.
+pub fn remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> N
+where
+    K: Ord + Copy,
+    N: Node<K>,
+{
+    tree_remove(nodes, root, index);
+    swap_remove(nodes, root, index)
 }
 
 /// Returns the index of the node with the smallest key in the tree starting with the
