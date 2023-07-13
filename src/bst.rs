@@ -186,9 +186,9 @@ where
 /// Removes the node located at `index` from the vector `nodes` and returns it.
 /// The removed node is replaced by the last node in the vector.
 /// It does not remove the node from the tree.
-/// 
+///
 /// ## Panics:
-/// 
+///
 /// Panics if `index` is out of bounds.
 ///
 /// ## Example:
@@ -303,11 +303,11 @@ where
 }
 
 /// Removes the node located at `index` from the tree but not the vector `nodes`
-/// and returns the index of the node that replaced it in the tree.
-/// Returns Err(Error) if `index` is out of bounds.
-/// 
+/// and returns the index of the node that replaced it in the tree. Returns `None`
+/// if the node was not replaced by another node becuase it was a leaf.
+///
 /// ## Panics:
-/// 
+///
 /// Panics if `index` is out of bounds.
 ///
 /// ## Example:
@@ -345,7 +345,8 @@ where
     let len: usize = nodes.len();
     let r: usize = nodes[index].right();
     let l: usize = nodes[index].left();
-    if l >= len && r >= len {    // leaf node
+    if l >= len && r >= len {
+        // leaf node
         if index == *root {
             *root = NIL;
         } else {
@@ -357,13 +358,16 @@ where
             }
         }
         None
-    } else if l >= len && r < len {  // only the right child exists
+    } else if l >= len && r < len {
+        // only the right child exists
         transplant(nodes, root, index, r);
         Some(r)
-    } else if l < len && r >= len {  // only the left child exists
+    } else if l < len && r >= len {
+        // only the left child exists
         transplant(nodes, root, index, l);
         Some(l)
-    } else {  // both children exist
+    } else {
+        // both children exist
         let y: usize = minimum(nodes, r).unwrap(); // should never panic
         if y != r {
             let yr = nodes[y].right();
@@ -379,9 +383,9 @@ where
 }
 
 /// Removes the node at `index` from both the tree and the vector.
-/// 
+///
 /// ## Panics:
-/// 
+///
 /// Panics if `index` is out of bounds.
 pub fn remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> N
 where
@@ -901,6 +905,8 @@ where
 }
 
 /// Returns true if the properties of a binary tree hold true.
+/// This function is primarily used for testing.
+#[doc(hidden)]
 pub fn is_valid<K, T>(nodes: &[T], root: usize) -> bool
 where
     K: Ord,
@@ -913,6 +919,6 @@ where
             };
             prev = next;
         }
-    } 
+    }
     true
 }

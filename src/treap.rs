@@ -79,7 +79,7 @@ pub trait Treap<K, P, const MAX_HEAP: bool> {
 }
 
 /// Constructs a treap from a slice of objects that implement the
-/// `Node` trait and returns a tuple containing a vector of tree
+/// [Node] trait and returns a tuple containing a vector of tree
 /// nodes and the index of the root node.
 ///
 /// ## Example:
@@ -182,32 +182,6 @@ where
     }
 }
 
-/*
-/// Updates the order of the nodes in the treap starting from `index` and going down the tree.
-pub fn push_down<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize)
-where
-    K: Ord + Copy,
-    P: Ord + Copy,
-    N: Node<K, P>,
-{
-    //while !nodes[index].is_leaf() {
-    let len = nodes.len();
-    while nodes[index].left() < len || nodes[index].right() < len {
-        if nodes[index].left() < len
-            && (nodes[index].right() >= len
-                || nodes[nodes[index].left()]
-                    .priority()
-                    .cmp(nodes[nodes[index].right()].priority())
-                    == order)
-        {
-            bst::rotate_right(nodes, root, index);
-        } else {
-            bst::rotate_left(nodes, root, index);
-        }
-    }
-}
-*/
-
 #[inline]
 fn get_child<K, P, N>(nodes: &mut [N], a: usize, order: Ordering, b: usize) -> Option<usize>
 where
@@ -223,11 +197,11 @@ where
     } else if b >= len {
         Some(a)
     } else {
-        if nodes[a].priority().cmp(nodes[b].priority()) == order {
-            Some(a)
+        Some(if nodes[a].priority().cmp(nodes[b].priority()) == order {
+            a
         } else {
-            Some(b)
-        }
+            b
+        })
     }
 }
 
@@ -238,7 +212,8 @@ where
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    while let Some(child_index) = get_child(nodes, nodes[index].left(), order, nodes[index].right()) {
+    while let Some(child_index) = get_child(nodes, nodes[index].left(), order, nodes[index].right())
+    {
         if nodes[child_index].priority().cmp(nodes[index].priority()) == order {
             if child_index == nodes[index].right() {
                 rotate_left(nodes, root, index);
@@ -251,11 +226,10 @@ where
     }
 }
 
-/// Removes and returns the element at `index` from the treap. Returns `None` if `index` is
-/// out of bounds or the treap is empty.
-/// 
+/// Removes and returns the node at `index` from the treap.
+///
 /// ## Panics:
-/// 
+///
 /// Panics if `index` is out of bounds.
 ///
 /// ## Example:
@@ -275,7 +249,7 @@ where
 ///     let node = MyNode::from((rand::random(), rand::random()));
 ///     insert(&mut treap, &mut root, Greater, node);
 /// }
-/// 
+///
 /// assert!(is_valid(&treap, root, Greater), "Insertion did not produce a valid treap.");
 ///
 /// while !treap.is_empty() {
@@ -286,58 +260,25 @@ where
 ///     assert!(is_valid(&treap, root, Greater), "Treap properties violated after removal of node");
 /// }
 /// ```
-pub fn remove<K, P, N>(
-    nodes: &mut Vec<N>,
-    root: &mut usize,
-    order: Ordering,
-    index: usize,
-) -> N
+pub fn remove<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize) -> N
 where
     K: Ord + Copy,
     P: Ord + Copy,
     N: Node<K, P>,
 {
-    /*let len: usize = nodes.len();
-    let r: usize = nodes[index].right();
-    let l: usize = nodes[index].left();
-    if l >= len && r >= len {    // leaf node
-        if index == *root {
-            *root = bst::NIL;
-        } else {
-            let p: usize = nodes[index].parent();
-            if index == nodes[p].left() {
-                nodes[p].set_left(bst::NIL);
-            } else {
-                nodes[p].set_right(bst::NIL);
-            }
-        }
-    } else if l >= len && r < len {
-        bst::transplant(nodes, root, index, r);
-    } else if l < len && r >= len {
-        bst::transplant(nodes, root, index, l);
-    } else {
-        let y: usize = bst::minimum(nodes, r).unwrap(); // should never panic
-        if y != r {
-            let yr = nodes[y].right();
-            bst::transplant(nodes, root, y, yr);
-            nodes[y].set_right(r);
-            nodes[r].set_parent(y);
-        }
-        bst::transplant(nodes, root, index, y);
-        nodes[y].set_left(l);
-        nodes[l].set_parent(y);
-        push_down(nodes, root, order, y);
-    }
-    bst::swap_remove(nodes, root, index)*/
     if let Some(i) = bst::tree_remove(nodes, root, index) {
         push_down(nodes, root, order, i);
     }
     bst::swap_remove(nodes, root, index)
 }
 
-/// Modifies the priority of the element at `index` on the treap in such a way that its
-/// ordering relative to other elements is changed. It returns `Some(P)`
-/// containing the old priority, or None if `key` does not exist in the treap.
+/// Modifies the priority of the node at `index` in such a way that its
+/// ordering relative to other nodes is changed. It returns `Some(P)`
+/// containing the old priority, or `None` if `key` does not exist in the treap.
+///
+/// ## Panics:
+///
+/// Panics if `index` is out of bounds.
 ///
 /// ## Example:
 ///
@@ -361,7 +302,7 @@ where
 ///
 /// for index in 0..treap.len() {
 ///     let new_priority = rand::thread_rng().gen_range(0..treap.len());
-///     assert!(update(&mut treap, &mut root, Greater, index, new_priority).is_some());
+///     update(&mut treap, &mut root, Greater, index, new_priority);
 ///     assert!(bst::is_valid(&treap, root), "bst::is_valid failed for index {}", index);
 ///     assert!(heap::is_valid(&treap, Greater, root), "heap::is_valid failed for index {}", index);
 /// }
@@ -372,27 +313,23 @@ pub fn update<K, P, N>(
     order: Ordering,
     index: usize,
     new_priority: P,
-) -> Option<P>
+) -> P
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
-    N: Node<K, P> + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: Node<K, P>,
 {
-    if index < nodes.len() {
-        let old_priority: P = *nodes[index].priority();
-        nodes[index].set_priority(new_priority);
-        if new_priority.cmp(&old_priority) == order {
-            bubble_up(nodes, root, order, index);
-        } else {
-            push_down(nodes, root, order, index);
-        }
-        Some(old_priority)
+    let old_priority: P = *nodes[index].priority();
+    nodes[index].set_priority(new_priority);
+    if new_priority.cmp(&old_priority) == order {
+        bubble_up(nodes, root, order, index);
     } else {
-        None
+        push_down(nodes, root, order, index);
     }
+    old_priority
 }
 
-/// Removes and returns the element on the top of the treap. Returns `None` if the Treap is empty.
+/// Removes and returns the node on the top of the treap. Returns `None` if the treap is empty.
 pub fn top<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering) -> Option<N>
 where
     K: Ord + Copy,
@@ -408,7 +345,8 @@ where
 
 /// Returns true if the properties of both a heap and a binary search tree hold true.
 /// This function is primarly used for testing.
-pub fn is_valid<K, P, N>(nodes: &Vec<N>, root: usize, order: Ordering) -> bool
+#[doc(hidden)]
+pub fn is_valid<K, P, N>(nodes: &[N], root: usize, order: Ordering) -> bool
 where
     K: Ord + Copy,
     P: Ord + Copy,
@@ -426,8 +364,8 @@ where
 #[derive(Debug, Clone, Copy)]
 pub struct TreapNode<K, P>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     parent: usize,
     left: usize,
@@ -437,10 +375,10 @@ where
 
 impl<K, P> From<(K, P)> for TreapNode<K, P>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
-    /// Creates and initializes a new node with a tuplie containing a key and priority.
+    /// Creates and initializes a new node with a tuple containing a key and priority.
     fn from(entry: (K, P)) -> Self {
         Self {
             parent: bst::NIL,
@@ -453,8 +391,8 @@ where
 
 impl<K, P> heap::Priority<P> for TreapNode<K, P>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     /// Returns an immutable reference to the node's priority.
     #[inline]
@@ -471,8 +409,8 @@ where
 
 impl<K, P> Node<K, P> for TreapNode<K, P>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     /// Returns an immutable reference to a tuple containing the node's key and priority.
     #[inline]
@@ -483,8 +421,8 @@ where
 
 impl<K, P> bst::Node<K> for TreapNode<K, P>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     /// Returns an immutable reference to the node's key.
     #[inline]
@@ -532,8 +470,8 @@ where
 pub struct Iter<'a, K, P>
 where
     Self: Sized,
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     iter: std::slice::Iter<'a, TreapNode<K, P>>,
 }
@@ -541,8 +479,8 @@ where
 impl<'a, K, P> From<std::slice::Iter<'a, TreapNode<K, P>>> for Iter<'a, K, P>
 where
     Self: Sized,
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     fn from(iter: std::slice::Iter<'a, TreapNode<K, P>>) -> Self {
         Iter { iter }
@@ -552,8 +490,8 @@ where
 impl<'a, K, P> Iterator for Iter<'a, K, P>
 where
     Self: Sized,
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     type Item = &'a (K, P);
     fn next(&mut self) -> Option<Self::Item> {
@@ -565,8 +503,8 @@ where
 #[derive(Debug, Clone)]
 pub struct BasicTreap<K, P, const MAX_HEAP: bool>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     treap: Vec<TreapNode<K, P>>,
     root: usize,
@@ -575,8 +513,8 @@ where
 
 impl<K, P, const MAX_HEAP: bool> Default for BasicTreap<K, P, MAX_HEAP>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     /// Creates a new `BasicTreap` object.
     fn default() -> Self {
@@ -586,8 +524,8 @@ where
 
 impl<K, P, const MAX_HEAP: bool> BasicTreap<K, P, MAX_HEAP>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     /// Creates, initializes, and returns a new [BasicTreap] object.
     pub fn new() -> Self {
@@ -677,8 +615,8 @@ where
 
 impl<K, P, const MAX_HEAP: bool> Treap<K, P, MAX_HEAP> for BasicTreap<K, P, MAX_HEAP>
 where
-    K: Ord + Copy + std::fmt::Debug,
-    P: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
+    P: Ord + Copy,
 {
     /// Returns the number of elements in the treap.
     fn len(&self) -> usize {
@@ -704,11 +642,7 @@ where
     /// and returns an immutable reference to a tuple containing its key and
     /// priority, or `None` if the key is not in the treap.
     fn search(&self, key: &K) -> Option<&(K, P)> {
-        if let Some(i) = bst::search(&self.treap, self.root, key) {
-            Some(self.treap[i].entry())
-        } else {
-            None
-        }
+        bst::search(&self.treap, self.root, key).map(|i| self.treap[i].entry())
     }
 
     /// Inserts a new node containing `key` and `priority` into the treap.
@@ -756,11 +690,8 @@ where
     /// }
     /// ```
     fn remove(&mut self, key: &K) -> Option<(K, P)> {
-        if let Some(index) = bst::search(&self.treap, self.root, key) {
-            let node = remove(&mut self.treap, &mut self.root, self.order, index);
-                return Some(*node.entry());
-        }
-        None
+        bst::search(&self.treap, self.root, key)
+            .map(|i| *remove(&mut self.treap, &mut self.root, self.order, i).entry())
     }
 
     /// Removes the node containing `key` from the treap and returns a tuple
@@ -790,7 +721,7 @@ where
     /// }
     /// ```
     fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
-        if let Some(index) = bst::search(&self.treap, self.root, key) {
+        bst::search(&self.treap, self.root, key).map(|index| {
             update(
                 &mut self.treap,
                 &mut self.root,
@@ -798,9 +729,7 @@ where
                 index,
                 new_priority,
             )
-        } else {
-            None
-        }
+        })
     }
 
     /// Removes the node containing `key` from the treap and returns a tuple
@@ -830,7 +759,7 @@ where
     /// }
     /// ```
     fn top(&mut self) -> Option<(K, P)> {
-        top(&mut self.treap, &mut self.root, self.order).map(|x| *x.entry())
+        top(&mut self.treap, &mut self.root, self.order).map(|node| *node.entry())
     }
 }
 
@@ -855,14 +784,14 @@ where
 /// These include `peek`, `top`, and `update`.
 pub struct RandomizedTreap<K>
 where
-    K: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
 {
     treap: BasicTreap<K, usize, true>,
 }
 
 impl<K> Default for RandomizedTreap<K>
 where
-    K: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
 {
     /// Creates a new `RandomizedTreap` object.
     fn default() -> Self {
@@ -872,7 +801,7 @@ where
 
 impl<K> RandomizedTreap<K>
 where
-    K: Ord + Copy + std::fmt::Debug,
+    K: Ord + Copy,
 {
     /// Creates, initializes, and returns a new [RandomizedTreap] object.
     pub fn new() -> Self {
@@ -944,11 +873,7 @@ where
     /// Performs a binary serach on the Treap to locate the node containing `key` and
     /// returns an immutable reference to its key, or `None` if the key is not in the treap.
     pub fn search(&self, key: &K) -> Option<&K> {
-        if let Some(x) = self.treap.search(key) {
-            Some(&x.0)
-        } else {
-            None
-        }
+        self.treap.search(key).map(|x| &x.0)
     }
 
     /// Inserts a new node containing `key` into the treap.
@@ -1018,13 +943,12 @@ where
     /// ```
     pub fn rebalance(&mut self) {
         for index in 0..self.len() {
-            let new_priority: usize = rand::random();
             update(
                 &mut self.treap.treap,
                 &mut self.treap.root,
                 self.treap.order,
                 index,
-                new_priority,
+                rand::random(),
             );
         }
     }
