@@ -109,7 +109,7 @@ pub fn build<K, P, N>(s: &[N], order: Ordering) -> (Vec<N>, usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P> + From<N> + Copy,
+    N: Node<K, P> + Copy,
 {
     let mut nodes: Vec<N> = Vec::new();
     let mut root: usize = bst::NIL;
@@ -120,7 +120,7 @@ where
 }
 
 /// Updates the order of the nodes in the treap starting from `index` and going up the tree to the root.
-pub fn bubble_up<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize)
+pub fn bubble_up<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
@@ -308,7 +308,7 @@ where
 /// }
 /// ```
 pub fn update<K, P, N>(
-    nodes: &mut Vec<N>,
+    nodes: &mut [N],
     root: &mut usize,
     order: Ordering,
     index: usize,

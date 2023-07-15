@@ -337,7 +337,7 @@ where
 /// assert!(nodes.is_empty(), "Failed to remove all nodes.");
 /// assert!(root == NIL, "root is not NIL.");
 /// ```
-pub fn tree_remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> Option<usize>
+pub fn tree_remove<K, N>(nodes: &mut [N], root: &mut usize, index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     N: Node<K>,
