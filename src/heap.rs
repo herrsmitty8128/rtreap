@@ -38,6 +38,15 @@ where
     /// Returns an immutable reference to the nodes priority.
     fn priority(&self) -> &P;
 
+    // /// Sets the nodes priority to `new_priority`.
+    //fn set_priority(&mut self, new_priority: P);
+}
+
+/// A trait used to standardize the interface for mutable objects stored in a heap.
+pub trait MutPriority<P>
+where
+    Self: Sized,
+{
     /// Sets the nodes priority to `new_priority`.
     fn set_priority(&mut self, new_priority: P);
 }
@@ -124,6 +133,15 @@ where
         &self.priority
     }
 
+    //fn set_priority(&mut self, new_priority: P) {
+    //    self.priority = new_priority;
+    //}
+}
+
+impl<P> MutPriority<P> for HeapNode<P>
+where
+    P: Ord + Copy,
+{
     fn set_priority(&mut self, new_priority: P) {
         self.priority = new_priority;
     }
@@ -199,7 +217,7 @@ pub fn update<P, N, const B: usize>(
 ) -> Option<P>
 where
     P: Ord + Copy,
-    N: Priority<P>,
+    N: Priority<P> + MutPriority<P>,
 {
     let len: usize = heap.len();
     if index < len {
@@ -415,7 +433,7 @@ pub type QuinaryMaxHeap<P, N> = Heap<P, N, 5, true>;
 pub struct Heap<P, N, const B: usize, const MAX_HEAP: bool>
 where
     P: Ord,
-    N: Priority<P>,
+    N: Priority<P> + MutPriority<P>,
 {
     heap: Vec<N>,
     order: Ordering,
@@ -425,7 +443,7 @@ where
 impl<P, N, const B: usize, const MAX_HEAP: bool> Index<usize> for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
-    N: Priority<P>,
+    N: Priority<P> + MutPriority<P>,
 {
     type Output = N;
     fn index(&'_ self, index: usize) -> &'_ Self::Output {
@@ -436,7 +454,7 @@ where
 impl<P, N, const B: usize, const MAX_HEAP: bool> Default for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
-    N: Priority<P>,
+    N: Priority<P> + MutPriority<P>,
 {
     fn default() -> Self {
         Self::new()
@@ -446,7 +464,7 @@ where
 impl<P, N, const B: usize, const MAX_HEAP: bool> From<&[N]> for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
-    N: Priority<P> + Clone,
+    N: Priority<P> + MutPriority<P> + Clone,
 {
     /// Builds a new Heap object from a slice of type N<P> by cloning the elements in the slice.
     ///
@@ -493,7 +511,7 @@ where
 impl<P, N, const B: usize, const MAX_HEAP: bool> Heap<P, N, B, MAX_HEAP>
 where
     P: Ord,
-    N: Priority<P>,
+    N: Priority<P> + MutPriority<P>,
 {
     /// Constructs a new, empty heap.
     /// The new heap will allocate memory as elements are inserted.
@@ -610,7 +628,7 @@ where
 impl<P, N, const B: usize, const MAX_HEAP: bool> PriorityQueue<P, N> for Heap<P, N, B, MAX_HEAP>
 where
     P: Ord + Copy,
-    N: Priority<P>,
+    N: Priority<P> + MutPriority<P>,
 {
     /// Inserts an element into the heap.
     ///

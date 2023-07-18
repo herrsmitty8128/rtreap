@@ -23,11 +23,14 @@ use crate::{
     bst::{self, rotate_left, rotate_right},
     heap,
 };
+use bst::Node as BstNode;
 use std::cmp::Ordering;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 /// A trait that defines the interface of a node in a treap. Implementors of this trait
 /// are also required to also implement [bst::Node<K>] and [heap::Priority<P>].
-pub trait Node<K, P>: bst::Node<K> + heap::Priority<P>
+pub trait Node<K, P>: bst::Node<K> + heap::Priority<P> + heap::MutPriority<P>
 where
     Self: Sized,
     K: Ord + Copy,
@@ -109,7 +112,7 @@ pub fn build<K, P, N>(s: &[N], order: Ordering) -> (Vec<N>, usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P> + Copy,
+    N: bst::Node<K> + heap::Priority<P> + Copy,
 {
     let mut nodes: Vec<N> = Vec::new();
     let mut root: usize = bst::NIL;
@@ -124,7 +127,7 @@ pub fn bubble_up<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, in
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     let len: usize = nodes.len();
     while nodes[index].parent() < len
@@ -172,7 +175,7 @@ pub fn insert<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, no
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     if let Ok(index) = bst::insert(nodes, root, node) {
         bubble_up(nodes, root, order, index);
@@ -187,7 +190,7 @@ fn get_child<K, P, N>(nodes: &mut [N], a: usize, order: Ordering, b: usize) -> O
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     let len: usize = nodes.len();
     if a >= len && b >= len {
@@ -210,7 +213,7 @@ pub fn push_down<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, in
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     while let Some(child_index) = get_child(nodes, nodes[index].left(), order, nodes[index].right())
     {
@@ -264,7 +267,7 @@ pub fn remove<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, in
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     if let Some(i) = bst::tree_remove(nodes, root, index) {
         push_down(nodes, root, order, i);
@@ -317,7 +320,7 @@ pub fn update<K, P, N>(
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P> + heap::MutPriority<P>,
 {
     let old_priority: P = *nodes[index].priority();
     nodes[index].set_priority(new_priority);
@@ -334,7 +337,7 @@ pub fn top<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering) -> Op
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     if nodes.is_empty() {
         None
@@ -350,7 +353,7 @@ pub fn is_valid<K, P, N>(nodes: &[N], root: usize, order: Ordering) -> bool
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: Node<K, P>,
+    N: bst::Node<K> + heap::Priority<P>,
 {
     heap::is_valid(nodes, order, root) && bst::is_valid(nodes, root)
 }
@@ -399,7 +402,13 @@ where
     fn priority(&self) -> &P {
         &self.entry.1
     }
+}
 
+impl<K, P> heap::MutPriority<P> for TreapNode<K, P>
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+{
     /// Sets the nodes' priority to `new_priority`.
     #[inline]
     fn set_priority(&mut self, new_priority: P) {
@@ -769,6 +778,81 @@ where
 /****************************************************************************/
 /****************************************************************************/
 
+pub struct HashedTreapNode<K>
+where
+    K: Ord + Copy + Hash + Sized,
+{
+    parent: usize,
+    left: usize,
+    right: usize,
+    key: K,
+    digest: u64,
+}
+
+impl<K> HashedTreapNode<K>
+where
+    K: Ord + Copy + Hash + Sized,
+{
+    pub fn new(key: K) -> Self {
+        let mut s = DefaultHasher::new();
+        key.hash(&mut s);
+        let digest: u64 = s.finish();
+        Self {
+            parent: bst::NIL,
+            left: bst::NIL,
+            right: bst::NIL,
+            key,
+            digest,
+        }
+    }
+}
+
+impl<K> heap::Priority<u64> for HashedTreapNode<K>
+where
+    K: Ord + Copy + Hash + Sized,
+{
+    fn priority(&self) -> &u64 {
+        &self.digest
+    }
+}
+
+impl<K> bst::Node<K> for HashedTreapNode<K>
+where
+    K: Ord + Copy + Hash + Sized,
+{
+    fn is_leaf(&self) -> bool {
+        self.left == bst::NIL && self.right == bst::NIL
+    }
+
+    fn key(&self) -> &K {
+        &self.key
+    }
+
+    fn left(&self) -> usize {
+        self.left
+    }
+
+    fn parent(&self) -> usize {
+        self.parent
+    }
+
+    fn right(&self) -> usize {
+        self.right
+    }
+
+    fn set_left(&mut self, l: usize) {
+        self.left = l;
+    }
+
+    fn set_parent(&mut self, p: usize) {
+        self.parent = p;
+    }
+
+    fn set_right(&mut self, r: usize) {
+        self.right = r;
+    }
+}
+
 /// An implementation of a randomized treap.
 ///
 /// This struct is implemented as a wrapper around a [BasicTreap] object, which automatically
@@ -782,31 +866,33 @@ where
 /// The interface for this implementation is slightly different than [BasicTreap] because several
 /// of the methods that are common to a treap are not applicable to a randomized treap by its nature.
 /// These include `peek`, `top`, and `update`.
-pub struct RandomizedTreap<K>
+pub struct HashedTreap<K>
 where
-    K: Ord + Copy,
+    K: Ord + Copy + Hash,
 {
-    treap: BasicTreap<K, usize, true>,
+    treap: Vec<HashedTreapNode<K>>,
+    root: usize,
 }
 
-impl<K> Default for RandomizedTreap<K>
+impl<K> Default for HashedTreap<K>
 where
-    K: Ord + Copy,
+    K: Ord + Copy + Hash,
 {
-    /// Creates a new `RandomizedTreap` object.
+    /// Creates a new `HashedTreap` object.
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<K> RandomizedTreap<K>
+impl<K> HashedTreap<K>
 where
-    K: Ord + Copy,
+    K: Ord + Copy + Hash,
 {
-    /// Creates, initializes, and returns a new [RandomizedTreap] object.
+    /// Creates, initializes, and returns a new [HashedTreap] object.
     pub fn new() -> Self {
         Self {
-            treap: BasicTreap::new(),
+            treap: Vec::new(),
+            root: bst::NIL,
         }
     }
 
@@ -818,13 +904,14 @@ where
     /// If it is important to know the exact allocated capacity of a treap, always use the `capacity` method after construction.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            treap: BasicTreap::with_capacity(capacity),
+            treap: Vec::with_capacity(capacity),
+            root: bst::NIL,
         }
     }
 
     /// Returns the index of the root node in the underlying vector.
-    pub fn root(&self) -> usize {
-        self.treap.root()
+    pub fn root(&self) -> &K {
+        self.treap[self.root].key()
     }
 
     /// Returns the number of elements the treap can hold without reallocating.
@@ -857,7 +944,7 @@ where
     /// ```
     #[doc(hidden)]
     pub fn is_valid(&self) -> bool {
-        self.treap.is_valid()
+        is_valid(&self.treap, self.root, Ordering::Greater)
     }
 
     /// Returns the number of elements in the treap.
@@ -873,7 +960,7 @@ where
     /// Performs a binary serach on the Treap to locate the node containing `key` and
     /// returns an immutable reference to its key, or `None` if the key is not in the treap.
     pub fn search(&self, key: &K) -> Option<&K> {
-        self.treap.search(key).map(|x| &x.0)
+        bst::search(&self.treap, self.root, key).map(|i| self.treap[i].key())
     }
 
     /// Inserts a new node containing `key` into the treap.
@@ -887,7 +974,12 @@ where
     /// assert!(treap.insert(123, 456).is_some(), "Treap insertion failed.");
     /// ```
     pub fn insert(&mut self, key: K) -> Option<()> {
-        self.treap.insert(key, rand::random::<usize>())
+        insert(
+            &mut self.treap,
+            &mut self.root,
+            Ordering::Greater,
+            HashedTreapNode::new(key),
+        )
     }
 
     /// Removes the node containing `key` from the treap and returns the removed node's key.
@@ -915,41 +1007,7 @@ where
     /// }
     /// ```
     pub fn remove(&mut self, key: &K) -> Option<K> {
-        self.treap.remove(key).map(|x| x.0)
-    }
-
-    /// This method attempts to rebalance the tree by iterating over each node,
-    /// assigning a new random priority, and updating its order relative to the
-    /// other nodes in the tree.
-    ///
-    /// ## Example:
-    ///
-    /// ```
-    /// use rtreap::treap::{RandomizedTreap, Treap};
-    /// use rand::prelude::*;
-    ///
-    /// const COUNT: usize = 100;
-    ///
-    /// let mut treap: RandomizedTreap<usize> = RandomizedTreap::new();
-    /// let mut keys: Vec<usize> = (0..COUNT).map(|_| rand::random::<usize>()).collect();
-    ///
-    /// for i in 0..COUNT {
-    ///     treap.insert(keys[i]);
-    /// }
-    ///
-    /// treap.rebalance();
-    ///
-    /// assert!(treap.is_valid());
-    /// ```
-    pub fn rebalance(&mut self) {
-        for index in 0..self.len() {
-            update(
-                &mut self.treap.treap,
-                &mut self.treap.root,
-                self.treap.order,
-                index,
-                rand::random(),
-            );
-        }
+        bst::search(&self.treap, self.root, key)
+            .map(|index| *remove(&mut self.treap, &mut self.root, Ordering::Greater, index).key())
     }
 }
