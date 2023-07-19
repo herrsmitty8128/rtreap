@@ -2,12 +2,12 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE.txt or http://www.opensource.org/licenses/mit-license.php.
 
-use crate::bst;
+use crate::{bst, bst::BinaryNode};
 
 const PARENT_MASK: usize = usize::MAX >> 1;
 const COLOR_MASK: usize = 1 << ((std::mem::size_of::<usize>() * 8) - 1);
 
-pub trait Node<E>: bst::Node<E>
+pub trait Node<E>: BinaryNode<E>
 where
     Self: Sized,
 {

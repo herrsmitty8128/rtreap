@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use rand::prelude::*;
-    use rtreap::treap::{BasicTreap, Treap as TreapTrait};
+    use rtreap::treap::BasicTreap;
     use std::vec;
 
     const COUNT: usize = 1000;

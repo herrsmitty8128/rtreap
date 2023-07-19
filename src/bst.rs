@@ -47,7 +47,7 @@ use std::cmp::Ordering;
 pub const NIL: usize = usize::MAX;
 
 /// Trait designed to model the node in a binary tree.
-pub trait Node<K>
+pub trait BinaryNode<K>
 where
     Self: Sized,
 {
@@ -123,7 +123,7 @@ where
     }
 }
 
-impl<K> Node<K> for TreeNode<K>
+impl<K> BinaryNode<K> for TreeNode<K>
 where
     K: Ord,
 {
@@ -163,7 +163,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{build, Node, TreeNode};
+/// use rtreap::bst::{build, BinaryNode, TreeNode};
 ///
 /// let values: [usize; 7] = [5, 7, 3, 4, 1, 9, 2];
 /// let (nodes, root) = build::<usize, TreeNode<usize>>(&values);
@@ -173,7 +173,7 @@ where
 pub fn build<K, T>(s: &[K]) -> (Vec<T>, usize)
 where
     K: Ord + Copy,
-    T: Node<K> + From<K>,
+    T: BinaryNode<K> + From<K>,
 {
     let mut nodes: Vec<T> = Vec::new();
     let mut root: usize = NIL;
@@ -194,7 +194,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, swap_remove, build};
+/// use rtreap::bst::{TreeNode, BinaryNode, swap_remove, build};
 ///
 /// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -231,7 +231,7 @@ where
 /// ```
 pub fn swap_remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> N
 where
-    N: Node<K>,
+    N: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     let n: usize = len - 1; // get the index of the last node
@@ -265,7 +265,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{Node, TreeNode, transplant, build, swap_remove};
+/// use rtreap::bst::{BinaryNode, TreeNode, transplant, build, swap_remove};
 ///
 /// let values: [usize; 9] = [5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -282,7 +282,7 @@ where
 pub fn transplant<K, T>(nodes: &mut [T], root: &mut usize, dst: usize, src: usize)
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     if dst < len {
@@ -313,7 +313,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, NIL, remove, insert, is_valid, swap_remove};
+/// use rtreap::bst::{TreeNode, BinaryNode, NIL, remove, insert, is_valid, swap_remove};
 /// use rand::prelude::*;
 ///
 /// let mut nodes: Vec<TreeNode<usize>> = Vec::new();
@@ -340,7 +340,7 @@ where
 pub fn tree_remove<K, N>(nodes: &mut [N], root: &mut usize, index: usize) -> Option<usize>
 where
     K: Ord + Copy,
-    N: Node<K>,
+    N: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     let r: usize = nodes[index].right();
@@ -390,7 +390,7 @@ where
 pub fn remove<K, N>(nodes: &mut Vec<N>, root: &mut usize, index: usize) -> N
 where
     K: Ord + Copy,
-    N: Node<K>,
+    N: BinaryNode<K>,
 {
     tree_remove(nodes, root, index);
     swap_remove(nodes, root, index)
@@ -400,7 +400,7 @@ where
 /// node at `index` or `None` if the tree is empty.
 ///
 /// ```
-/// use rtreap::bst::{minimum, Node, TreeNode, build};
+/// use rtreap::bst::{minimum, BinaryNode, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -412,7 +412,7 @@ where
 pub fn minimum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let num_nodes: usize = nodes.len();
     while index < num_nodes {
@@ -430,7 +430,7 @@ where
 /// node at `index` or `None` if the tree is empty.
 ///
 /// ```
-/// use rtreap::bst::{maximum, Node, TreeNode, build};
+/// use rtreap::bst::{maximum, BinaryNode, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -442,7 +442,7 @@ where
 pub fn maximum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let num_nodes: usize = nodes.len();
     while index < num_nodes {
@@ -463,7 +463,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{minimum, maximum, TreeNode, Node, build};
+/// use rtreap::bst::{minimum, maximum, TreeNode, BinaryNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -485,7 +485,7 @@ pub fn insert<K, T>(
 ) -> std::result::Result<usize, usize>
 where
     K: Ord + Copy,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let new_node: usize = nodes.len();
     if new_node == 0 {
@@ -531,7 +531,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{search, Node, TreeNode, build};
+/// use rtreap::bst::{search, BinaryNode, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -544,7 +544,7 @@ where
 pub fn search<K, T>(nodes: &[T], mut root: usize, key: &K) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     while root < nodes.len() {
         match key.cmp(nodes[root].key()) {
@@ -561,7 +561,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{rotate_right, Node, TreeNode, build};
+/// use rtreap::bst::{rotate_right, BinaryNode, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -577,7 +577,7 @@ where
 /// ```
 pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
 where
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     if index < len {
@@ -610,7 +610,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{rotate_left, Node, TreeNode, build};
+/// use rtreap::bst::{rotate_left, BinaryNode, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
@@ -626,7 +626,7 @@ where
 /// ```
 pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
 where
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     if index < len {
@@ -659,14 +659,14 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{pre_order_next, Node, TreeNode, build};
+/// use rtreap::bst::{pre_order_next, BinaryNode, TreeNode, build};
 /// use rand::prelude::*;
 ///
 /// // funcion used to recursively traverse a binary search tree (for testing only)
 /// pub fn pre_order_recursive<K, T>(v: &mut Vec<usize>, nodes: &[T], index: usize)
 /// where
 ///     K: Ord,
-///     T: Node<K>,
+///     T: BinaryNode<K>,
 /// {
 ///     if index < nodes.len() {
 ///         v.push(index);
@@ -706,7 +706,7 @@ where
 pub fn pre_order_next<K, T>(nodes: &[T], mut prev: usize) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     if prev < len {
@@ -732,14 +732,14 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{post_order_next, Node, TreeNode, build, NIL};
+/// use rtreap::bst::{post_order_next, BinaryNode, TreeNode, build, NIL};
 /// use rand::prelude::*;
 ///
 /// // funcion used to recursively traverse a binary search tree (for testing only)
 /// pub fn post_order_recursive<K, T>(v: &mut Vec<usize>, nodes: &[T], index: usize)
 /// where
 ///     K: Ord,
-///     T: Node<K>,
+///     T: BinaryNode<K>,
 /// {
 ///     if index < nodes.len() {
 ///         post_order_recursive(v, nodes, nodes[index].left());
@@ -777,7 +777,7 @@ where
 pub fn post_order_next<K, T>(nodes: &[T], root: usize, mut prev: usize) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     if prev != root {
         let len: usize = nodes.len();
@@ -811,7 +811,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, in_order_next, minimum, build};
+/// use rtreap::bst::{TreeNode, BinaryNode, in_order_next, minimum, build};
 /// use rand::prelude::*;
 ///
 /// // build a binary search tree from an array of random numbers
@@ -833,7 +833,7 @@ where
 pub fn in_order_next<K, T>(nodes: &[T], mut prev: usize) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     if prev < len {
@@ -860,7 +860,7 @@ where
 /// ## Example:
 ///
 /// ```
-/// use rtreap::bst::{TreeNode, Node, in_order_prev, maximum, build};
+/// use rtreap::bst::{TreeNode, BinaryNode, in_order_prev, maximum, build};
 /// use rand::prelude::*;
 ///
 /// // build a binary search tree from an array of random numbers
@@ -882,7 +882,7 @@ where
 pub fn in_order_prev<K, T>(nodes: &[T], mut prev: usize) -> Option<usize>
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     let len: usize = nodes.len();
     if prev < len {
@@ -910,7 +910,7 @@ where
 pub fn is_valid<K, T>(nodes: &[T], root: usize) -> bool
 where
     K: Ord,
-    T: Node<K>,
+    T: BinaryNode<K>,
 {
     if let Some(mut prev) = minimum(nodes, root) {
         while let Some(next) = in_order_next(nodes, prev) {
