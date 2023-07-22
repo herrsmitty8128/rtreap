@@ -302,6 +302,15 @@ where
     heap::is_valid(nodes, order, root) && bst::is_valid(nodes, root)
 }
 
+pub fn extend<K, P, N>(dst: &mut Vec<N>, dst_root: usize, src: &[N], src_root: usize, order: Ordering)
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: BinaryNode<K> + Priority<P>,
+{
+
+}
+
 /// An implementation of the [Node] trait.
 ///
 /// ## Arguments:
@@ -702,92 +711,14 @@ where
     }
 }
 
-/****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
-/****************************************************************************/
-
-pub struct HashedTreapNode<K>
-where
-    K: Ord + Copy + Hash + Sized,
-{
-    parent: usize,
-    left: usize,
-    right: usize,
-    key: K,
-    digest: u64,
-}
-
-impl<K> From<K> for HashedTreapNode<K>
-where
-    K: Ord + Copy + Hash + Sized,
-{
-    fn from(key: K) -> Self {
-        let mut s: DefaultHasher = DefaultHasher::new();
-        key.hash(&mut s);
-        let digest: u64 = s.finish();
-        Self {
-            parent: bst::NIL,
-            left: bst::NIL,
-            right: bst::NIL,
-            key,
-            digest,
-        }
-    }
-}
-
-impl<K> Priority<u64> for HashedTreapNode<K>
-where
-    K: Ord + Copy + Hash + Sized,
-{
-    fn priority(&self) -> &u64 {
-        &self.digest
-    }
-}
-
-impl<K> BinaryNode<K> for HashedTreapNode<K>
-where
-    K: Ord + Copy + Hash + Sized,
-{
-    fn key(&self) -> &K {
-        &self.key
-    }
-
-    fn left(&self) -> usize {
-        self.left
-    }
-
-    fn parent(&self) -> usize {
-        self.parent
-    }
-
-    fn right(&self) -> usize {
-        self.right
-    }
-
-    fn set_left(&mut self, l: usize) {
-        self.left = l;
-    }
-
-    fn set_parent(&mut self, p: usize) {
-        self.parent = p;
-    }
-
-    fn set_right(&mut self, r: usize) {
-        self.right = r;
-    }
-}
-
 /// An implementation of a randomized treap.
 ///
-/// This struct is implemented as a wrapper around a [BasicTreap] object, which automatically
-/// assigns a random priority to each node with the aim of self-balancing the tree.
+/// This struct automatically assigns a random priority to each node with the aim of self-balancing the tree.
 ///
 /// Nodes in this treap store both the key and priority. The key is provided as generic parameter
-/// `K` but the priority is automatically assigned by using the [rand::random] function.This approach
-/// has the advantage of not needing to calculate the priority for each node when making changes to
-/// the treap, however, at the cost of using more memory.
+/// `K` but the priority is automatically calculated by hashing the key with the [std::hash::Hash] function. 
+/// This approach has the advantage of not needing to calculate the priority for each node when making
+/// changes to the treap, however, at the cost of using more memory.
 ///
 /// The interface for this implementation is slightly different than [BasicTreap] because several
 /// of the methods that are common to a treap are not applicable to a randomized treap by its nature.
@@ -796,7 +727,7 @@ pub struct HashedTreap<K>
 where
     K: Ord + Copy + Hash,
 {
-    treap: Vec<HashedTreapNode<K>>,
+    treap: Vec<TreapNode<K, u64>>,
     root: usize,
 }
 
@@ -900,11 +831,14 @@ where
     /// assert!(treap.insert(123, 456).is_some(), "Treap insertion failed.");
     /// ```
     pub fn insert(&mut self, key: K) -> Option<()> {
+        let mut state = DefaultHasher::new();
+        key.hash(&mut state);
+        let priority: u64 = state.finish();
         insert(
             &mut self.treap,
             &mut self.root,
             Ordering::Greater,
-            HashedTreapNode::from(key),
+            TreapNode::from((key, priority)),
         )
     }
 
