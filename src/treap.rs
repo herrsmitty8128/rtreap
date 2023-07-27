@@ -24,6 +24,7 @@ use crate::{heap, heap::MutPriority, heap::Priority};
 use std::cmp::Ordering;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::default::Default;
 
 /// Constructs a treap from a slice of objects that implement the
 /// [Node] trait and returns a tuple containing a vector of tree
@@ -302,13 +303,60 @@ where
     heap::is_valid(nodes, order, root) && bst::is_valid(nodes, root)
 }
 
-pub fn extend<K, P, N>(dst: &mut Vec<N>, dst_root: usize, src: &[N], src_root: usize, order: Ordering)
+pub fn merge<K, P, N>(dst: &mut Vec<N>, dst_root: &mut usize, src: &[N], src_root: usize, order: Ordering) -> bool
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: BinaryNode<K> + Priority<P>,
+    N: BinaryNode<K> + Priority<P> + Default + Copy,
 {
+    if dst.is_empty() || src.is_empty() {
+        false
+    } else {
+        let mut r: usize = dst.len();
 
+        dst.push(N::default());
+
+        let dst_max: usize = bst::maximum(&dst, *dst_root).unwrap();
+        let src_min: usize = bst::minimum(&src, src_root).unwrap();
+        if dst_max < src_min {
+            dst[r].set_left(*dst_root);
+            dst[r].set_right(src_root + r);
+        } else {
+            let dst_min: usize = bst::minimum(&dst, *dst_root).unwrap();
+            let src_max: usize = bst::maximum(&src, src_root).unwrap();
+            if src_max < dst_min {
+                dst[r].set_right(*dst_root);
+                dst[r].set_left(src_root + r);
+            } else {
+                // the keys in the treaps overlap
+                return false
+            }
+        }
+
+        // copy all the src nodes into the dst array and update their parent and child indices
+        for node in src.into_iter() {
+            let i: usize = dst.len();
+            dst.push(*node);
+            let mut x = dst[i].parent();
+            if x < src.len() {
+                dst[i].set_parent(x + r);
+            }
+            x = dst[i].left();
+            if x < src.len() {
+                dst[i].set_left(x + r);
+            }
+            x = dst[i].right();
+            if x < src.len() {
+                dst[i].set_right(x + r);
+            }
+        }
+
+        dst[*dst_root].set_parent(r);
+        dst[src_root + r].set_parent(r);
+        top(dst, &mut r, order);
+        *dst_root = r;
+        true
+    }
 }
 
 /// An implementation of the [Node] trait.
