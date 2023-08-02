@@ -259,6 +259,39 @@ where
     nodes.swap_remove(index)
 }
 
+/// Copies all the nodes from `src` and appends them to `dst` while updating their parent and child indices.
+/// Returns the updated root index in the `dst` vector.
+pub fn extend<K, N>(dst: &mut Vec<N>, src: &[N], src_root: usize) -> usize
+where
+    K: Ord + Copy,
+    N: BinaryNode<K> + Default + Copy,
+{
+    let offset: usize = dst.len();
+    let m: usize = src.len();
+    let mut n: usize = offset;
+
+    for node in src.iter() {
+        dst.push(*node);
+
+        let mut i = dst[n].parent();
+        dst[n].set_parent(if i < m { i + offset } else { NIL });
+
+        i = dst[n].left();
+        dst[n].set_left(if i < m { i + offset } else { NIL });
+
+        i = dst[n].right();
+        dst[n].set_right(if i < m { i + offset } else { NIL });
+
+        n += 1;
+    }
+
+    if src_root < m {
+        src_root + offset
+    } else {
+        NIL
+    }
+}
+
 /// Removes the node at index `dst` from the tree by replacing it with node at index `src`.
 /// It does not remove the node from the vector `nodes`.
 ///

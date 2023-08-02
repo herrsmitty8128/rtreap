@@ -23,8 +23,8 @@ use crate::{bst, bst::BinaryNode};
 use crate::{heap, heap::MutPriority, heap::Priority};
 use std::cmp::Ordering;
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::default::Default;
+use std::hash::{Hash, Hasher};
 
 /// Constructs a treap from a slice of objects that implement the
 /// [Node] trait and returns a tuple containing a vector of tree
@@ -303,60 +303,42 @@ where
     heap::is_valid(nodes, order, root) && bst::is_valid(nodes, root)
 }
 
-pub fn merge<K, P, N>(dst: &mut Vec<N>, dst_root: &mut usize, src: &[N], src_root: usize, order: Ordering) -> bool
+/// Merges two treaps into one. The nodes of both treaps must be contained in the same vector.
+/// This function assumes that all the keys of the nodes in the left treap are less than all the
+/// keys of the nodes in the right treap. Verifying this before calling this function is 
+/// your responsibility. If the keys overlap, then the resulting treap will violate the rules
+/// of a binary search tree.
+/// 
+/// If the nodes are stored in different vectors, then [bst::extend] can be used to merge the nodes
+/// of both treaps into one vector before calling this function. 
+/// 
+/// ## Panics:
+/// 
+/// Panics if `left_root` or `right_root` are out of bounds.
+/// 
+/// ## Example:
+/// 
+/// ```
+/// ```
+pub fn merge<K, P, N>(
+    nodes: &mut Vec<N>,
+    left_root: usize,
+    right_root: usize,
+    order: Ordering,
+) -> usize
 where
     K: Ord + Copy,
     P: Ord + Copy,
     N: BinaryNode<K> + Priority<P> + Default + Copy,
 {
-    if dst.is_empty() || src.is_empty() {
-        false
-    } else {
-        let mut r: usize = dst.len();
-
-        dst.push(N::default());
-
-        let dst_max: usize = bst::maximum(&dst, *dst_root).unwrap();
-        let src_min: usize = bst::minimum(&src, src_root).unwrap();
-        if dst_max < src_min {
-            dst[r].set_left(*dst_root);
-            dst[r].set_right(src_root + r);
-        } else {
-            let dst_min: usize = bst::minimum(&dst, *dst_root).unwrap();
-            let src_max: usize = bst::maximum(&src, src_root).unwrap();
-            if src_max < dst_min {
-                dst[r].set_right(*dst_root);
-                dst[r].set_left(src_root + r);
-            } else {
-                // the keys in the treaps overlap
-                return false
-            }
-        }
-
-        // copy all the src nodes into the dst array and update their parent and child indices
-        for node in src.into_iter() {
-            let i: usize = dst.len();
-            dst.push(*node);
-            let mut x = dst[i].parent();
-            if x < src.len() {
-                dst[i].set_parent(x + r);
-            }
-            x = dst[i].left();
-            if x < src.len() {
-                dst[i].set_left(x + r);
-            }
-            x = dst[i].right();
-            if x < src.len() {
-                dst[i].set_right(x + r);
-            }
-        }
-
-        dst[*dst_root].set_parent(r);
-        dst[src_root + r].set_parent(r);
-        top(dst, &mut r, order);
-        *dst_root = r;
-        true
-    }
+    let mut new_root: usize = nodes.len();
+    nodes.push(N::default());
+    nodes[new_root].set_left(left_root);
+    nodes[new_root].set_right(right_root);
+    nodes[left_root].set_parent(new_root);
+    nodes[right_root].set_parent(new_root);
+    top(nodes, &mut new_root, order);
+    new_root
 }
 
 /// An implementation of the [Node] trait.
@@ -757,6 +739,37 @@ where
     pub fn top(&mut self) -> Option<(K, P)> {
         top(&mut self.treap, &mut self.root, self.order).map(|node| *node.entry())
     }
+
+
+    pub fn merge(&mut self, other: &Self,) -> bool {
+        if other.is_empty() {
+            // there is nothing to do
+            true
+        } else if self.is_empty() {
+            // copy the source into the destination
+            dst.extend(src.iter());
+            true
+        } else {
+            let dst_max: usize = bst::maximum(dst, *dst_root).unwrap();
+            let src_min: usize = bst::minimum(src, src_root).unwrap();
+            if dst[dst_max].key() < src[src_min].key() {
+                let new_src_root: usize = bst::extend(dst, src, src_root);
+                *dst_root = merge(dst, *dst_root, new_src_root, order);
+                true
+            } else {
+                let dst_min: usize = bst::minimum(dst, *dst_root).unwrap();
+                let src_max: usize = bst::maximum(src, src_root).unwrap();
+                if src[src_max].key() < dst[dst_min].key() {
+                    let new_src_root: usize = bst::extend(dst, src, src_root);
+                    *dst_root = merge(dst, new_src_root, *dst_root, order);
+                    true
+                } else {
+                    // the keys in the treaps overlap
+                    false
+                }
+            }
+        }
+    }
 }
 
 /// An implementation of a randomized treap.
@@ -764,7 +777,7 @@ where
 /// This struct automatically assigns a random priority to each node with the aim of self-balancing the tree.
 ///
 /// Nodes in this treap store both the key and priority. The key is provided as generic parameter
-/// `K` but the priority is automatically calculated by hashing the key with the [std::hash::Hash] function. 
+/// `K` but the priority is automatically calculated by hashing the key with the [std::hash::Hash] function.
 /// This approach has the advantage of not needing to calculate the priority for each node when making
 /// changes to the treap, however, at the cost of using more memory.
 ///
