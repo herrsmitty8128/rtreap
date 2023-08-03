@@ -305,19 +305,19 @@ where
 
 /// Merges two treaps into one. The nodes of both treaps must be contained in the same vector.
 /// This function assumes that all the keys of the nodes in the left treap are less than all the
-/// keys of the nodes in the right treap. Verifying this before calling this function is 
+/// keys of the nodes in the right treap. Verifying this before calling this function is
 /// your responsibility. If the keys overlap, then the resulting treap will violate the rules
 /// of a binary search tree.
-/// 
+///
 /// If the nodes are stored in different vectors, then [bst::extend] can be used to merge the nodes
-/// of both treaps into one vector before calling this function. 
-/// 
+/// of both treaps into one vector before calling this function.
+///
 /// ## Panics:
-/// 
+///
 /// Panics if `left_root` or `right_root` are out of bounds.
-/// 
+///
 /// ## Example:
-/// 
+///
 /// ```
 /// ```
 pub fn merge<K, P, N>(
@@ -350,8 +350,8 @@ where
 #[derive(Debug, Clone, Copy)]
 pub struct TreapNode<K, P>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     parent: usize,
     left: usize,
@@ -359,10 +359,25 @@ where
     entry: (K, P),
 }
 
+impl<K, P> Default for TreapNode<K, P>
+where
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
+{
+    fn default() -> Self {
+        Self {
+            parent: bst::NIL,
+            left: bst::NIL,
+            right: bst::NIL,
+            entry: (K::default(), P::default()),
+        }
+    }
+}
+
 impl<K, P> From<(K, P)> for TreapNode<K, P>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Creates and initializes a new node with a tuple containing a key and priority.
     fn from(entry: (K, P)) -> Self {
@@ -377,8 +392,8 @@ where
 
 impl<K, P> Priority<P> for TreapNode<K, P>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Returns an immutable reference to the node's priority.
     #[inline]
@@ -389,8 +404,8 @@ where
 
 impl<K, P> MutPriority<P> for TreapNode<K, P>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Sets the nodes' priority to `new_priority`.
     #[inline]
@@ -401,8 +416,8 @@ where
 
 impl<K, P> TreapNode<K, P>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Returns an immutable reference to a tuple containing the node's key and priority.
     #[inline]
@@ -413,8 +428,8 @@ where
 
 impl<K, P> BinaryNode<K> for TreapNode<K, P>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Returns an immutable reference to the node's key.
     #[inline]
@@ -462,8 +477,8 @@ where
 pub struct Iter<'a, K, P>
 where
     Self: Sized,
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     iter: std::slice::Iter<'a, TreapNode<K, P>>,
 }
@@ -471,8 +486,8 @@ where
 impl<'a, K, P> From<std::slice::Iter<'a, TreapNode<K, P>>> for Iter<'a, K, P>
 where
     Self: Sized,
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     fn from(iter: std::slice::Iter<'a, TreapNode<K, P>>) -> Self {
         Iter { iter }
@@ -482,8 +497,8 @@ where
 impl<'a, K, P> Iterator for Iter<'a, K, P>
 where
     Self: Sized,
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     type Item = &'a (K, P);
     fn next(&mut self) -> Option<Self::Item> {
@@ -495,8 +510,8 @@ where
 #[derive(Debug, Clone)]
 pub struct BasicTreap<K, P, const T: bool>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     treap: Vec<TreapNode<K, P>>,
     root: usize,
@@ -505,8 +520,8 @@ where
 
 impl<K, P, const T: bool> Default for BasicTreap<K, P, T>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Creates a new [BasicTreap] object.
     fn default() -> Self {
@@ -516,8 +531,8 @@ where
 
 impl<K, P, const T: bool> BasicTreap<K, P, T>
 where
-    K: Ord + Copy,
-    P: Ord + Copy,
+    K: Ord + Copy + Default,
+    P: Ord + Copy + Default,
 {
     /// Creates, initializes, and returns a new [BasicTreap] object.
     pub fn new() -> Self {
@@ -740,28 +755,30 @@ where
         top(&mut self.treap, &mut self.root, self.order).map(|node| *node.entry())
     }
 
-
-    pub fn merge(&mut self, other: &Self,) -> bool {
+    /// 
+    pub fn merge(&mut self, other: &mut Self) -> bool {
         if other.is_empty() {
             // there is nothing to do
             true
         } else if self.is_empty() {
             // copy the source into the destination
-            dst.extend(src.iter());
+            self.treap.extend(other.treap.iter());
+            self.root = other.root;
             true
         } else {
-            let dst_max: usize = bst::maximum(dst, *dst_root).unwrap();
-            let src_min: usize = bst::minimum(src, src_root).unwrap();
-            if dst[dst_max].key() < src[src_min].key() {
-                let new_src_root: usize = bst::extend(dst, src, src_root);
-                *dst_root = merge(dst, *dst_root, new_src_root, order);
+            let self_max: usize = bst::maximum(&mut self.treap, self.root).unwrap();
+            let other_min: usize = bst::minimum(&mut other.treap, other.root).unwrap();
+            if self.treap[self_max].key() < other.treap[other_min].key() {
+                let right_root: usize = bst::extend(&mut self.treap, &other.treap, other.root);
+                self.root = merge(&mut self.treap, self.root, right_root, self.order);
                 true
             } else {
-                let dst_min: usize = bst::minimum(dst, *dst_root).unwrap();
-                let src_max: usize = bst::maximum(src, src_root).unwrap();
-                if src[src_max].key() < dst[dst_min].key() {
-                    let new_src_root: usize = bst::extend(dst, src, src_root);
-                    *dst_root = merge(dst, new_src_root, *dst_root, order);
+                let self_min: usize = bst::minimum(&mut self.treap, self.root).unwrap();
+                let other_max: usize = bst::maximum(&mut other.treap, other.root).unwrap();
+                if other.treap[other_max].key() < self.treap[self_min].key() {
+                    let left_root: usize =
+                        bst::extend(&mut self.treap, &other.treap, other.root);
+                    self.root = merge(&mut self.treap, left_root, self.root, self.order);
                     true
                 } else {
                     // the keys in the treaps overlap
@@ -786,7 +803,7 @@ where
 /// These include `peek`, `top`, and `update`.
 pub struct HashedTreap<K>
 where
-    K: Ord + Copy + Hash,
+    K: Ord + Copy + Hash + Default,
 {
     treap: Vec<TreapNode<K, u64>>,
     root: usize,
@@ -794,7 +811,7 @@ where
 
 impl<K> Default for HashedTreap<K>
 where
-    K: Ord + Copy + Hash,
+    K: Ord + Copy + Hash + Default,
 {
     /// Creates a new `HashedTreap` object.
     fn default() -> Self {
@@ -804,7 +821,7 @@ where
 
 impl<K> HashedTreap<K>
 where
-    K: Ord + Copy + Hash,
+    K: Ord + Copy + Hash + Default,
 {
     /// Creates, initializes, and returns a new [HashedTreap] object.
     pub fn new() -> Self {
