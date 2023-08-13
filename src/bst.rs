@@ -78,24 +78,6 @@ where
     fn key(&self) -> &K;
 }
 
-/*
-pub trait BinarySearchTree<K, N>
-where
-    K: Ord + Copy,
-    N: Node<K>,
-{
-    fn insert(&mut self, key: K) -> bool;
-    fn remove(&mut self, key: &K) -> bool;
-    fn search(&self) -> Option<&K>;
-    fn minimum(&self) -> Option<&K>;
-    fn maximum(&self) -> Option<&K>;
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-}
-*/
-
 /// A general purpose binary tree node that implements the `Node` trait
 /// and can be used with the functions contained in the `bst` module.
 #[derive(Debug, Clone, Copy)]
@@ -189,7 +171,7 @@ where
 ///
 /// ## Panics:
 ///
-/// Panics if `index` is out of bounds.
+/// Panics if `root` or `index` are out of bounds.
 ///
 /// ## Example:
 ///
@@ -274,13 +256,13 @@ where
         dst.push(*node);
 
         let mut i = dst[n].parent();
-        dst[n].set_parent(if i < m { i + offset } else { NIL });
+        dst[n].set_parent(if i != NIL { i + offset } else { NIL });
 
         i = dst[n].left();
-        dst[n].set_left(if i < m { i + offset } else { NIL });
+        dst[n].set_left(if i != NIL { i + offset } else { NIL });
 
         i = dst[n].right();
-        dst[n].set_right(if i < m { i + offset } else { NIL });
+        dst[n].set_right(if i != NIL { i + offset } else { NIL });
 
         n += 1;
     }
@@ -294,6 +276,10 @@ where
 
 /// Removes the node at index `dst` from the tree by replacing it with node at index `src`.
 /// It does not remove the node from the vector `nodes`.
+///
+/// ## Panics:
+///
+/// Panics if `root` or `dst` are out of bounds.
 ///
 /// ## Example:
 ///
@@ -317,21 +303,18 @@ where
     K: Ord + Copy,
     T: BinaryNode<K>,
 {
-    let len: usize = nodes.len();
-    if dst < len {
-        let p: usize = nodes[dst].parent();
-        if p < len {
-            if dst == nodes[p].left() {
-                nodes[p].set_left(src);
-            } else {
-                nodes[p].set_right(src);
-            }
+    let p: usize = nodes[dst].parent();
+    if p == NIL {
+        *root = src;
+    } else {
+        if dst == nodes[p].left() {
+            nodes[p].set_left(src);
         } else {
-            *root = src;
+            nodes[p].set_right(src);
         }
-        if src < len {
-            nodes[src].set_parent(p);
-        }
+    }
+    if src != NIL {
+        nodes[src].set_parent(p);
     }
 }
 
@@ -341,7 +324,7 @@ where
 ///
 /// ## Panics:
 ///
-/// Panics if `index` is out of bounds.
+/// Panics if `root` or `index` are out of bounds.
 ///
 /// ## Example:
 ///
@@ -363,6 +346,8 @@ where
 ///     assert!(is_valid(&nodes, root), "Tree is not valid");
 ///     let beg_len: usize = nodes.len();
 ///     let index = rand::thread_rng().gen_range(0..nodes.len());
+///     assert!(index != NIL);
+///     assert!(root != NIL);
 ///     remove(&mut nodes, &mut root, index);
 ///     assert!(beg_len - nodes.len() == 1);
 /// }
@@ -375,33 +360,23 @@ where
     K: Ord + Copy,
     N: BinaryNode<K>,
 {
-    let len: usize = nodes.len();
     let r: usize = nodes[index].right();
     let l: usize = nodes[index].left();
-    if l >= len && r >= len {
+    if l == NIL && r == NIL {
         // leaf node
-        if index == *root {
-            *root = NIL;
-        } else {
-            let p: usize = nodes[index].parent();
-            if index == nodes[p].left() {
-                nodes[p].set_left(NIL);
-            } else {
-                nodes[p].set_right(NIL);
-            }
-        }
+        transplant(nodes, root, index, NIL);
         None
-    } else if l >= len && r < len {
+    } else if l == NIL && r != NIL {
         // only the right child exists
         transplant(nodes, root, index, r);
         Some(r)
-    } else if l < len && r >= len {
+    } else if l != NIL && r == NIL {
         // only the left child exists
         transplant(nodes, root, index, l);
         Some(l)
     } else {
         // both children exist
-        let y: usize = minimum(nodes, r).unwrap(); // should never panic
+        let y: usize = minimum(nodes, r);
         if y != r {
             let yr = nodes[y].right();
             transplant(nodes, root, y, yr);
@@ -432,31 +407,35 @@ where
 /// Returns the index of the node with the smallest key in the tree starting with the
 /// node at `index` or `None` if the tree is empty.
 ///
+/// ## Panics:
+///
+/// Panics if `index` is out of bounds.
+///
+/// ## Example:
+///
 /// ```
 /// use rtreap::bst::{minimum, BinaryNode, TreeNode, build};
 ///
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
-/// let i: usize = minimum(&nodes, root).unwrap();
+/// let i: usize = minimum(&nodes, root);
 ///
 /// assert!(*nodes[i].key() == 1, "Minimum returned {} instead of 1", i);
 /// ```
-pub fn minimum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
+pub fn minimum<K, T>(nodes: &[T], mut index: usize) -> usize
 where
     K: Ord,
     T: BinaryNode<K>,
 {
-    let num_nodes: usize = nodes.len();
-    while index < num_nodes {
+    loop {
         let left: usize = nodes[index].left();
-        if left < num_nodes {
-            index = left;
+        if left == NIL {
+            return index;
         } else {
-            return Some(index);
+            index = left;
         }
     }
-    None
 }
 
 /// Returns the index of the node with the largest key in the tree starting with the
@@ -468,28 +447,26 @@ where
 /// let values: Vec<usize> = vec![5,6,3,9,7,8,4,1,2];
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
-/// let i = maximum(&nodes, root).unwrap();
+/// let i = maximum(&nodes, root);
 ///
 /// assert!(*nodes[i].key() == 9, "Maximum returned {} instead of 9", i);
 /// ```
-pub fn maximum<K, T>(nodes: &[T], mut index: usize) -> Option<usize>
+pub fn maximum<K, T>(nodes: &[T], mut index: usize) -> usize
 where
     K: Ord,
     T: BinaryNode<K>,
 {
-    let num_nodes: usize = nodes.len();
-    while index < num_nodes {
+    loop {
         let right: usize = nodes[index].right();
-        if right < num_nodes {
-            index = right;
+        if right == NIL {
+            return index;
         } else {
-            return Some(index);
+            index = right;
         }
     }
-    None
 }
 
-/// Inserts `node` into the tree and returns `Some(usize)` containing the index of the inserted node.
+/// Inserts `node` into the tree and returns `Ok(usize)` containing the index of the inserted node.
 /// If the key of the new node already exists in the tree, then it will return `Err(usize)` containing
 /// the index of the already existing node with the same key without replacing it.
 ///
@@ -505,10 +482,10 @@ where
 ///
 /// assert!(*nodes[root].key() == 5, "Invalid tree root node");
 ///
-/// let i = minimum(&nodes, root).unwrap();
+/// let i = minimum(&nodes, root);
 /// assert!(*nodes[i].key() == 1, "Minimum value is {} instead of 1", nodes[i].key());
 ///
-/// let i = maximum(&nodes, root).unwrap();
+/// let i = maximum(&nodes, root);
 /// assert!(*nodes[i].key() == 9, "Maximum value is {} instead of 9", nodes[i].key());
 /// ```
 pub fn insert<K, T>(
@@ -574,16 +551,16 @@ where
 /// let search_result = search(&nodes, root, &4).unwrap();
 /// assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
 /// ```
-pub fn search<K, T>(nodes: &[T], mut root: usize, key: &K) -> Option<usize>
+pub fn search<K, T>(nodes: &[T], mut index: usize, key: &K) -> Option<usize>
 where
     K: Ord,
     T: BinaryNode<K>,
 {
-    while root < nodes.len() {
-        match key.cmp(nodes[root].key()) {
-            Ordering::Equal => return Some(root),
-            Ordering::Less => root = nodes[root].left(),
-            Ordering::Greater => root = nodes[root].right(),
+    while index != NIL {
+        match key.cmp(nodes[index].key()) {
+            Ordering::Equal => return Some(index),
+            Ordering::Less => index = nodes[index].left(),
+            Ordering::Greater => index = nodes[index].right(),
         };
     }
     None
@@ -853,7 +830,7 @@ where
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
 /// // get the first node in the traversal by calling minimum()
-/// let mut prev: usize = minimum(&nodes, root).unwrap();
+/// let mut prev: usize = minimum(&nodes, root);
 ///
 /// // do something with prev here...
 ///
@@ -872,7 +849,7 @@ where
     if prev < len {
         let r: usize = nodes[prev].right();
         if r < len {
-            return minimum(nodes, r);
+            return Some(minimum(nodes, r));
         } else {
             let mut p: usize = nodes[prev].parent();
             while p < len {
@@ -902,7 +879,7 @@ where
 /// let (mut nodes, mut root) = build::<usize, TreeNode<usize>>(&values);
 ///
 /// // get the first node in the traversal by calling maximum()
-/// let mut prev: usize = maximum(&nodes, root).unwrap();
+/// let mut prev: usize = maximum(&nodes, root);
 ///
 /// // do something with prev here...
 ///
@@ -921,7 +898,7 @@ where
     if prev < len {
         let l: usize = nodes[prev].left();
         if l < len {
-            return maximum(nodes, l);
+            return Some(maximum(nodes, l));
         } else {
             let mut p: usize = nodes[prev].parent();
             while p < len {
@@ -939,19 +916,22 @@ where
 
 /// Returns true if the properties of a binary tree hold true.
 /// This function is primarily used for testing.
+///
+/// ## Panics:
+///
+/// Panics if `root` is out of bounds.
 #[doc(hidden)]
 pub fn is_valid<K, T>(nodes: &[T], root: usize) -> bool
 where
     K: Ord,
     T: BinaryNode<K>,
 {
-    if let Some(mut prev) = minimum(nodes, root) {
-        while let Some(next) = in_order_next(nodes, prev) {
-            if *nodes[prev].key() > *nodes[next].key() {
-                return false;
-            };
-            prev = next;
-        }
+    let mut prev: usize = minimum(nodes, root);
+    while let Some(next) = in_order_next(nodes, prev) {
+        if *nodes[prev].key() > *nodes[next].key() {
+            return false;
+        };
+        prev = next;
     }
     true
 }

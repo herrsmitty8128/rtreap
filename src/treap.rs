@@ -198,14 +198,12 @@ where
 ///     insert(&mut treap, &mut root, Greater, node);
 /// }
 ///
-/// assert!(is_valid(&treap, root, Greater), "Insertion did not produce a valid treap.");
-///
 /// while !treap.is_empty() {
+///     assert!(is_valid(&treap, root, Greater), "Treap properties violated");
 ///     let index = rand::thread_rng().gen_range(0..treap.len());
 ///     assert!(index < treap.len());
 ///     assert!(root < treap.len());
 ///     remove(&mut treap, &mut root, Greater, index);
-///     assert!(is_valid(&treap, root, Greater), "Treap properties violated after removal of node");
 /// }
 /// ```
 pub fn remove<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize) -> N
@@ -755,7 +753,7 @@ where
         top(&mut self.treap, &mut self.root, self.order).map(|node| *node.entry())
     }
 
-    /// 
+    ///
     pub fn merge(&mut self, other: &mut Self) -> bool {
         if other.is_empty() {
             // there is nothing to do
@@ -766,18 +764,17 @@ where
             self.root = other.root;
             true
         } else {
-            let self_max: usize = bst::maximum(&mut self.treap, self.root).unwrap();
-            let other_min: usize = bst::minimum(&mut other.treap, other.root).unwrap();
+            let self_max: usize = bst::maximum(&mut self.treap, self.root);
+            let other_min: usize = bst::minimum(&mut other.treap, other.root);
             if self.treap[self_max].key() < other.treap[other_min].key() {
                 let right_root: usize = bst::extend(&mut self.treap, &other.treap, other.root);
                 self.root = merge(&mut self.treap, self.root, right_root, self.order);
                 true
             } else {
-                let self_min: usize = bst::minimum(&mut self.treap, self.root).unwrap();
-                let other_max: usize = bst::maximum(&mut other.treap, other.root).unwrap();
+                let self_min: usize = bst::minimum(&mut self.treap, self.root);
+                let other_max: usize = bst::maximum(&mut other.treap, other.root);
                 if other.treap[other_max].key() < self.treap[self_min].key() {
-                    let left_root: usize =
-                        bst::extend(&mut self.treap, &other.treap, other.root);
+                    let left_root: usize = bst::extend(&mut self.treap, &other.treap, other.root);
                     self.root = merge(&mut self.treap, left_root, self.root, self.order);
                     true
                 } else {
