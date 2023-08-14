@@ -26,7 +26,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::default::Default;
 use std::hash::{Hash, Hasher};
 
-/// Constructs a treap from a slice of objects that implement the
+/*  Constructs a treap from a slice of objects that implement the
 /// [Node] trait and returns a tuple containing a vector of tree
 /// nodes and the index of the root node.
 ///
@@ -65,7 +65,7 @@ where
         insert(&mut nodes, &mut root, order, *node);
     }
     (nodes, root)
-}
+}*/
 
 /// Updates the order of the nodes in the treap starting from `index` and going up the tree to the root.
 pub fn bubble_up<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize)
@@ -87,46 +87,6 @@ where
         } else {
             bst::rotate_right(nodes, root, p);
         }
-    }
-}
-
-/// Inserts a new node into the treap. Returns `None` if the node's key already exists in the treap.
-///
-/// ## Arguments:
-///
-/// - nodes - A vector used to store the nodes in memory.
-/// - root - The index of the root node in the vector.
-/// - order - Ordering::Greater indicates a maximum treap, otherwise a minimum treap.
-/// - node - The new node to insert.
-///
-/// ## Example:
-///
-/// ```
-/// use rtreap::treap::{is_valid, insert, TreapNode};
-/// use rtreap::bst::NIL;
-/// use std::cmp::Ordering::Greater;
-///
-/// type MyNode = TreapNode<usize, usize>;
-/// let values: [usize; 9] = [1,2,3,4,5,6,7,8,9];
-/// let mut treap: Vec<MyNode> = Vec::new();
-/// let mut root: usize = NIL;
-///
-/// for v in values {
-///     insert(&mut treap, &mut root, Greater, MyNode::from((v,v)));
-///     assert!(is_valid(&treap, root, Greater))
-/// }
-/// ```
-pub fn insert<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, node: N) -> Option<()>
-where
-    K: Ord + Copy,
-    P: Ord + Copy,
-    N: BinaryNode<K> + Priority<P>,
-{
-    if let Ok(index) = bst::insert(nodes, root, node) {
-        bubble_up(nodes, root, order, index);
-        Some(())
-    } else {
-        None
     }
 }
 
@@ -174,6 +134,41 @@ where
     }
 }
 
+/// Inserts a new node into the treap. Returns `None` if the node's key already exists in the treap.
+///
+/// ## Arguments:
+///
+/// - nodes - A vector used to store the nodes in memory.
+/// - root - The index of the root node in the vector.
+/// - order - Ordering::Greater indicates a maximum treap, otherwise a minimum treap.
+/// - node - The new node to insert.
+///
+/// ## Example:
+///
+/// ```
+/// use rtreap::treap::{is_valid, insert, TreapNode};
+/// use rtreap::bst::NIL;
+/// use std::cmp::Ordering::Greater;
+///
+/// type MyNode = TreapNode<usize, usize>;
+/// let values: [usize; 9] = [1,2,3,4,5,6,7,8,9];
+/// let mut treap: Vec<MyNode> = Vec::new();
+/// let mut root: usize = NIL;
+///
+/// for v in values {
+///     insert(&mut treap, &mut root, Greater, MyNode::from((v,v)));
+///     assert!(is_valid(&treap, root, Greater))
+/// }
+/// ```
+pub fn insert<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize) -> std::result::Result<(), usize>
+where
+    K: Ord + Copy,
+    P: Ord + Copy,
+    N: BinaryNode<K> + Priority<P>,
+{
+    bst::insert(nodes, root, index).map(|_| bubble_up(nodes, root, order, index))
+}
+
 /// Removes and returns the node at `index` from the treap.
 ///
 /// ## Panics:
@@ -206,16 +201,15 @@ where
 ///     remove(&mut treap, &mut root, Greater, index);
 /// }
 /// ```
-pub fn remove<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize) -> N
+pub fn remove<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
     N: BinaryNode<K> + Priority<P>,
 {
-    if let Some(i) = bst::tree_remove(nodes, root, index) {
+    if let Some(i) = bst::remove(nodes, root, index) {
         push_down(nodes, root, order, i);
     }
-    bst::swap_remove(nodes, root, index)
 }
 
 /// Modifies the priority of the node at `index` in such a way that its
@@ -285,7 +279,9 @@ where
     if nodes.is_empty() {
         None
     } else {
-        Some(remove(nodes, root, order, *root))
+        let n = nodes[*root];
+        remove(nodes, root, order, *root);
+        Some(n)
     }
 }
 

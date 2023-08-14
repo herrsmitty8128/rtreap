@@ -138,7 +138,7 @@ where
     }
 }
 
-/// Constructs a binary search tree from a slice of objects that implement the
+/*  Constructs a binary search tree from a slice of objects that implement the
 /// `Ord` and `Copy` traits and returns a tuple containing a vector of tree
 /// nodes and the index of the root node.
 ///
@@ -163,7 +163,7 @@ where
         insert(&mut nodes, &mut root, T::from(*i)).unwrap();
     }
     (nodes, root)
-}
+}*/
 
 /// Removes the node located at `index` from the vector `nodes` and returns it.
 /// The removed node is replaced by the last node in the vector.
@@ -306,12 +306,10 @@ where
     let p: usize = nodes[dst].parent();
     if p == NIL {
         *root = src;
+    } else if dst == nodes[p].left() {
+        nodes[p].set_left(src);
     } else {
-        if dst == nodes[p].left() {
-            nodes[p].set_left(src);
-        } else {
-            nodes[p].set_right(src);
-        }
+        nodes[p].set_right(src);
     }
     if src != NIL {
         nodes[src].set_parent(p);
@@ -335,17 +333,18 @@ where
 /// let mut nodes: Vec<TreeNode<usize>> = Vec::new();
 /// let mut root: usize = NIL;
 ///
-/// for i in 0..1000 {
+/// for index in 0..1000 {
 ///     let node = TreeNode::from(rand::random::<usize>());
-///     insert(&mut nodes, &mut root, node);
+///     nodes.push(node);
+///     insert(&mut nodes, &mut root, index);
 /// }
 ///
-/// while !nodes.is_empty() {
+/// for index in (0..nodes.len()).rev() {
 ///     assert!(root != NIL);
 ///     assert!(!nodes.is_empty());
 ///     assert!(is_valid(&nodes, root), "Tree is not valid");
 ///     let beg_len: usize = nodes.len();
-///     let index = rand::thread_rng().gen_range(0..nodes.len());
+///     //let index = rand::thread_rng().gen_range(0..nodes.len());
 ///     assert!(index != NIL);
 ///     assert!(root != NIL);
 ///     remove(&mut nodes, &mut root, index);
@@ -355,7 +354,7 @@ where
 /// assert!(nodes.is_empty(), "Failed to remove all nodes.");
 /// assert!(root == NIL, "root is not NIL.");
 /// ```
-pub fn tree_remove<K, N>(nodes: &mut [N], root: &mut usize, index: usize) -> Option<usize>
+pub fn remove<K, N>(nodes: &mut [N], root: &mut usize, index: usize) -> Option<usize>
 where
     K: Ord + Copy,
     N: BinaryNode<K>,
@@ -390,6 +389,7 @@ where
     }
 }
 
+/*
 /// Removes the node at `index` from both the tree and the vector.
 ///
 /// ## Panics:
@@ -403,6 +403,7 @@ where
     tree_remove(nodes, root, index);
     swap_remove(nodes, root, index)
 }
+*/
 
 /// Returns the index of the node with the smallest key in the tree starting with the
 /// node at `index` or `None` if the tree is empty.
@@ -466,9 +467,13 @@ where
     }
 }
 
-/// Inserts `node` into the tree and returns `Ok(usize)` containing the index of the inserted node.
+/// Inserts the node at `index` into the tree. Returns `Ok(())` if the key did not previously exist in the tree.
 /// If the key of the new node already exists in the tree, then it will return `Err(usize)` containing
 /// the index of the already existing node with the same key without replacing it.
+/// 
+/// ## Panics:
+/// 
+/// Panics if `root` or `index` are out of bounds.
 ///
 /// ## Example:
 ///
@@ -488,41 +493,44 @@ where
 /// let i = maximum(&nodes, root);
 /// assert!(*nodes[i].key() == 9, "Maximum value is {} instead of 9", nodes[i].key());
 /// ```
-pub fn insert<K, T>(
-    nodes: &mut Vec<T>,
+pub fn insert<K, N>(
+    nodes: &mut [N],
     root: &mut usize,
-    node: T,
-) -> std::result::Result<usize, usize>
+    index: usize,
+) -> std::result::Result<(), usize>
 where
     K: Ord + Copy,
-    T: BinaryNode<K>,
+    N: BinaryNode<K>,
 {
-    let new_node: usize = nodes.len();
-    if new_node == 0 {
-        nodes.push(node);
-        *root = new_node;
+    if *root == NIL {
+        *root = index;
+        nodes[index].set_parent(NIL);
+        nodes[index].set_left(NIL);
+        nodes[index].set_right(NIL);
     } else {
         let mut n: usize = *root;
-        let key: &K = node.key();
+        let key: &K = nodes[index].key();
         loop {
             match key.cmp(nodes[n].key()) {
                 Ordering::Greater => {
-                    if nodes[n].right() < new_node {
+                    if nodes[n].right() != NIL {
                         n = nodes[n].right();
                     } else {
-                        nodes.push(node);
-                        nodes[n].set_right(new_node);
-                        nodes[new_node].set_parent(n);
+                        nodes[n].set_right(index);
+                        nodes[index].set_parent(n);
+                        nodes[index].set_left(NIL);
+                        nodes[index].set_right(NIL);
                         break;
                     }
                 }
                 Ordering::Less => {
-                    if nodes[n].left() < new_node {
+                    if nodes[n].left() != NIL {
                         n = nodes[n].left();
                     } else {
-                        nodes.push(node);
-                        nodes[n].set_left(new_node);
-                        nodes[new_node].set_parent(n);
+                        nodes[n].set_left(index);
+                        nodes[index].set_parent(n);
+                        nodes[index].set_left(NIL);
+                        nodes[index].set_right(NIL);
                         break;
                     }
                 }
@@ -532,7 +540,7 @@ where
             }
         }
     }
-    Ok(new_node)
+    Ok(())
 }
 
 /// Searches for the nodes containing `key` starting from `root`.
