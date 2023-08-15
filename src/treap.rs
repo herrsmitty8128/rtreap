@@ -134,7 +134,8 @@ where
     }
 }
 
-/// Inserts a new node into the treap. Returns `None` if the node's key already exists in the treap.
+/// Inserts the node located at `index` into the treap. If the nodes key already exists in the treap, then 
+/// it returns `Err(usize)` containing the index of the node that already contains the key.
 ///
 /// ## Arguments:
 ///
@@ -642,13 +643,28 @@ where
     /// let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
     /// assert!(treap.insert(123, 456).is_some(), "Treap insertion failed.");
     /// ```
-    pub fn insert(&mut self, key: K, priority: P) -> Option<()> {
-        insert(
-            &mut self.treap,
-            &mut self.root,
-            self.order,
-            TreapNode::from((key, priority)),
-        )
+    pub fn insert(&mut self, key: K, priority: P) -> bool {
+        if self.root == bst::NIL {
+            self.root = self.treap.len();
+            self.treap.push(TreapNode::from((key, priority)));
+            self.treap[self.root].set_parent(bst::NIL);
+            self.treap[self.root].set_left(bst::NIL);
+            self.treap[self.root].set_right(bst::NIL);
+        } else {
+            let (p, order) = bst::search(&self.treap, self.root, &key);
+            if order == Ordering::Equal {return false}
+            let index: usize = self.treap.len();
+            self.treap.push(TreapNode::from((key, priority)));
+            if order == Ordering::Greater {
+                self.treap[p].set_right(index);
+            } else {
+                self.treap[p].set_left(index);
+            }
+            self.treap[index].set_parent(p);
+            self.treap[index].set_left(bst::NIL);
+            self.treap[index].set_right(bst::NIL);
+        }
+        true
     }
 
     /// Removes the node containing `key` from the treap and returns a tuple
@@ -676,10 +692,10 @@ where
     ///     assert!(treap.remove(&k).is_some());
     /// }
     /// ```
-    pub fn remove(&mut self, key: &K) -> Option<(K, P)> {
+    /*pub fn remove(&mut self, key: &K) -> Option<(K, P)> {
         bst::search(&self.treap, self.root, key)
             .map(|i| *remove(&mut self.treap, &mut self.root, self.order, i).entry())
-    }
+    }*/
 
     /// Removes the node containing `key` from the treap and returns a tuple
     /// containing its key and priority. Returns None if `key` does not exist
@@ -749,7 +765,7 @@ where
         top(&mut self.treap, &mut self.root, self.order).map(|node| *node.entry())
     }
 
-    ///
+    /*
     pub fn merge(&mut self, other: &mut Self) -> bool {
         if other.is_empty() {
             // there is nothing to do
@@ -779,7 +795,7 @@ where
                 }
             }
         }
-    }
+    }*/
 }
 
 /// An implementation of a randomized treap.

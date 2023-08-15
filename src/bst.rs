@@ -165,6 +165,7 @@ where
     (nodes, root)
 }*/
 
+/*
 /// Removes the node located at `index` from the vector `nodes` and returns it.
 /// The removed node is replaced by the last node in the vector.
 /// It does not remove the node from the tree.
@@ -273,6 +274,8 @@ where
         NIL
     }
 }
+
+*/
 
 /// Removes the node at index `dst` from the tree by replacing it with node at index `src`.
 /// It does not remove the node from the vector `nodes`.
@@ -497,7 +500,7 @@ pub fn insert<K, N>(
     nodes: &mut [N],
     root: &mut usize,
     index: usize,
-) -> std::result::Result<(), usize>
+) -> bool
 where
     K: Ord + Copy,
     N: BinaryNode<K>,
@@ -505,46 +508,29 @@ where
     if *root == NIL {
         *root = index;
         nodes[index].set_parent(NIL);
-        nodes[index].set_left(NIL);
-        nodes[index].set_right(NIL);
     } else {
-        let mut n: usize = *root;
-        let key: &K = nodes[index].key();
-        loop {
-            match key.cmp(nodes[n].key()) {
-                Ordering::Greater => {
-                    if nodes[n].right() != NIL {
-                        n = nodes[n].right();
-                    } else {
-                        nodes[n].set_right(index);
-                        nodes[index].set_parent(n);
-                        nodes[index].set_left(NIL);
-                        nodes[index].set_right(NIL);
-                        break;
-                    }
-                }
-                Ordering::Less => {
-                    if nodes[n].left() != NIL {
-                        n = nodes[n].left();
-                    } else {
-                        nodes[n].set_left(index);
-                        nodes[index].set_parent(n);
-                        nodes[index].set_left(NIL);
-                        nodes[index].set_right(NIL);
-                        break;
-                    }
-                }
-                Ordering::Equal => {
-                    return Err(n);
-                }
+        let (p, order) = search(nodes, *root, nodes[index].key());
+        match order {
+            Ordering::Equal => return false,
+            Ordering::Greater => {
+                nodes[p].set_right(index);
+                nodes[index].set_parent(p);
+            },
+            Ordering::Less => {
+                nodes[p].set_left(index);
+                nodes[index].set_parent(p);
             }
         }
     }
-    Ok(())
+    nodes[index].set_left(NIL);
+    nodes[index].set_right(NIL);
+    true
 }
 
 /// Searches for the nodes containing `key` starting from `root`.
-/// Returns the index of the node or `None` if not found.
+/// Returns `Ok(usize)` containing the index of the node containing the key.
+/// Returns `Err(usize, bool) containing the index of the parent node and a bool value indicating
+/// whether the child is a left (true) or right (false) child. 
 ///
 /// ## Example:
 ///
@@ -559,19 +545,30 @@ where
 /// let search_result = search(&nodes, root, &4).unwrap();
 /// assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
 /// ```
-pub fn search<K, T>(nodes: &[T], mut index: usize, key: &K) -> Option<usize>
+pub fn search<K, T>(nodes: &[T], mut index: usize, key: &K) -> (usize, Ordering) //Option<usize>
 where
     K: Ord,
     T: BinaryNode<K>,
 {
-    while index != NIL {
+    loop {
         match key.cmp(nodes[index].key()) {
-            Ordering::Equal => return Some(index),
-            Ordering::Less => index = nodes[index].left(),
-            Ordering::Greater => index = nodes[index].right(),
+            Ordering::Equal => return (index, Ordering::Equal),
+            Ordering::Less => {
+                let left: usize = nodes[index].left();
+                if left == NIL {
+                    return (index, Ordering::Less);
+                }
+                index = left;
+            },
+            Ordering::Greater => {
+                let right: usize = nodes[index].right();
+                if right == NIL {
+                    return (index, Ordering::Greater);
+                }
+                index = right;
+            },
         };
     }
-    None
 }
 
 /// Rotates the node at `index` to the right.
