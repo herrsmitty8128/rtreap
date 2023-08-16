@@ -161,13 +161,18 @@ where
 ///     assert!(is_valid(&treap, root, Greater))
 /// }
 /// ```
-pub fn insert<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize) -> std::result::Result<(), usize>
+pub fn insert<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize) -> bool
 where
     K: Ord + Copy,
     P: Ord + Copy,
     N: BinaryNode<K> + Priority<P>,
 {
-    bst::insert(nodes, root, index).map(|_| bubble_up(nodes, root, order, index))
+    if bst::insert(nodes, root, index) {
+        bubble_up(nodes, root, order, index);
+        true
+    } else {
+        false
+    }
 }
 
 /// Removes and returns the node at `index` from the treap.
@@ -202,7 +207,7 @@ where
 ///     remove(&mut treap, &mut root, Greater, index);
 /// }
 /// ```
-pub fn remove<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering, index: usize)
+pub fn remove<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize)
 where
     K: Ord + Copy,
     P: Ord + Copy,
@@ -275,7 +280,7 @@ pub fn top<K, P, N>(nodes: &mut Vec<N>, root: &mut usize, order: Ordering) -> Op
 where
     K: Ord + Copy,
     P: Ord + Copy,
-    N: BinaryNode<K> + Priority<P>,
+    N: BinaryNode<K> + Priority<P> + Copy,
 {
     if nodes.is_empty() {
         None
@@ -557,8 +562,8 @@ where
     }
 
     /// Returns the index of the root node in the underlying vector.
-    pub fn root(&self) -> usize {
-        self.root
+    pub fn root(&self) -> &K {
+        self.treap[self.root].key()
     }
 
     /// Returns the number of elements the treap can hold without reallocating.
@@ -619,7 +624,7 @@ where
     /// Returns an immutable reference to a tuple containing the key and priority
     /// of the node at the root of the treap, or `None` if the treap is empty.
     pub fn peek(&self) -> Option<&(K, P)> {
-        if self.treap.is_empty() {
+        if self.root == bst::NIL {
             None
         } else {
             Some(self.treap[self.root].entry())
@@ -630,7 +635,13 @@ where
     /// and returns an immutable reference to a tuple containing its key and
     /// priority, or `None` if the key is not in the treap.
     pub fn search(&self, key: &K) -> Option<&(K, P)> {
-        bst::search(&self.treap, self.root, key).map(|i| self.treap[i].entry())
+        if self.root != bst::NIL {
+            let (p, order) = bst::search(&self.treap, self.root, key);
+            if order == Ordering::Equal {
+                return Some(self.treap[p].entry())
+            } 
+        }
+        None
     }
 
     /// Inserts a new node containing `key` and `priority` into the treap.
@@ -692,10 +703,16 @@ where
     ///     assert!(treap.remove(&k).is_some());
     /// }
     /// ```
-    /*pub fn remove(&mut self, key: &K) -> Option<(K, P)> {
-        bst::search(&self.treap, self.root, key)
-            .map(|i| *remove(&mut self.treap, &mut self.root, self.order, i).entry())
-    }*/
+    pub fn remove(&mut self, key: &K) -> Option<(K, P)> {
+        if self.root != bst::NIL {
+            let (index, order) = bst::search(&self.treap, self.root, key);
+            if order == Ordering::Equal {
+                remove(&mut self.treap, &mut self.root, self.order, index);
+                return Some(*self.treap[index].entry())
+            }
+        }
+        None
+    }
 
     /// Removes the node containing `key` from the treap and returns a tuple
     /// containing its key and priority. Returns None if `key` does not exist
@@ -724,15 +741,19 @@ where
     /// }
     /// ```
     pub fn update(&mut self, key: &K, new_priority: P) -> Option<P> {
-        bst::search(&self.treap, self.root, key).map(|index| {
-            update(
-                &mut self.treap,
-                &mut self.root,
-                self.order,
-                index,
-                new_priority,
-            )
-        })
+        if self.root != bst::NIL {
+            let (index, order) = bst::search(&self.treap, self.root, key);
+            if order == Ordering::Equal {
+                return Some(update(
+                    &mut self.treap,
+                    &mut self.root,
+                    self.order,
+                    index,
+                    new_priority,
+                ))
+            }
+        }
+        None
     }
 
     /// Removes the node containing `key` from the treap and returns a tuple
@@ -814,7 +835,7 @@ pub struct HashedTreap<K>
 where
     K: Ord + Copy + Hash + Default,
 {
-    treap: Vec<TreapNode<K, u64>>,
+    treap: BasicTreap<K, u64, true>,
     root: usize,
 }
 
@@ -835,7 +856,7 @@ where
     /// Creates, initializes, and returns a new [HashedTreap] object.
     pub fn new() -> Self {
         Self {
-            treap: Vec::new(),
+            treap: BasicTreap::new(),
             root: bst::NIL,
         }
     }
@@ -848,14 +869,14 @@ where
     /// If it is important to know the exact allocated capacity of a treap, always use the `capacity` method after construction.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            treap: Vec::with_capacity(capacity),
+            treap: BasicTreap::with_capacity(capacity),
             root: bst::NIL,
         }
     }
 
     /// Returns the index of the root node in the underlying vector.
     pub fn root(&self) -> &K {
-        self.treap[self.root].key()
+        self.treap.root()
     }
 
     /// Returns the number of elements the treap can hold without reallocating.
@@ -888,7 +909,7 @@ where
     /// ```
     #[doc(hidden)]
     pub fn is_valid(&self) -> bool {
-        is_valid(&self.treap, self.root, Ordering::Greater)
+        self.treap.is_valid()
     }
 
     /// Returns the number of elements in the treap.
@@ -904,7 +925,7 @@ where
     /// Performs a binary serach on the Treap to locate the node containing `key` and
     /// returns an immutable reference to its key, or `None` if the key is not in the treap.
     pub fn search(&self, key: &K) -> Option<&K> {
-        bst::search(&self.treap, self.root, key).map(|i| self.treap[i].key())
+        self.treap.search(key).map(|x| &x.0)
     }
 
     /// Inserts a new node containing `key` into the treap.
@@ -917,16 +938,11 @@ where
     /// let mut treap: BasicTreap<usize, usize, false> = BasicTreap::new();
     /// assert!(treap.insert(123, 456).is_some(), "Treap insertion failed.");
     /// ```
-    pub fn insert(&mut self, key: K) -> Option<()> {
+    pub fn insert(&mut self, key: K) -> bool {
         let mut state = DefaultHasher::new();
         key.hash(&mut state);
         let priority: u64 = state.finish();
-        insert(
-            &mut self.treap,
-            &mut self.root,
-            Ordering::Greater,
-            TreapNode::from((key, priority)),
-        )
+        self.treap.insert(key, priority)
     }
 
     /// Removes the node containing `key` from the treap and returns the removed node's key.
@@ -954,7 +970,6 @@ where
     /// }
     /// ```
     pub fn remove(&mut self, key: &K) -> Option<K> {
-        bst::search(&self.treap, self.root, key)
-            .map(|index| *remove(&mut self.treap, &mut self.root, Ordering::Greater, index).key())
+        self.treap.remove(key).map(|x| x.0)
     }
 }

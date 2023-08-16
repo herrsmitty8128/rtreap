@@ -512,15 +512,10 @@ where
         let (p, order) = search(nodes, *root, nodes[index].key());
         match order {
             Ordering::Equal => return false,
-            Ordering::Greater => {
-                nodes[p].set_right(index);
-                nodes[index].set_parent(p);
-            },
-            Ordering::Less => {
-                nodes[p].set_left(index);
-                nodes[index].set_parent(p);
-            }
+            Ordering::Greater => nodes[p].set_right(index),
+            Ordering::Less => nodes[p].set_left(index),
         }
+        nodes[index].set_parent(p);
     }
     nodes[index].set_left(NIL);
     nodes[index].set_right(NIL);
@@ -545,27 +540,27 @@ where
 /// let search_result = search(&nodes, root, &4).unwrap();
 /// assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
 /// ```
-pub fn search<K, T>(nodes: &[T], mut index: usize, key: &K) -> (usize, Ordering) //Option<usize>
+pub fn search<K, N>(nodes: &[N], mut root: usize, key: &K) -> (usize, Ordering) //Option<usize>
 where
     K: Ord,
-    T: BinaryNode<K>,
+    N: BinaryNode<K>,
 {
     loop {
-        match key.cmp(nodes[index].key()) {
-            Ordering::Equal => return (index, Ordering::Equal),
+        match key.cmp(nodes[root].key()) {
+            Ordering::Equal => return (root, Ordering::Equal),
             Ordering::Less => {
-                let left: usize = nodes[index].left();
+                let left: usize = nodes[root].left();
                 if left == NIL {
-                    return (index, Ordering::Less);
+                    return (root, Ordering::Less);
                 }
-                index = left;
+                root = left;
             },
             Ordering::Greater => {
-                let right: usize = nodes[index].right();
+                let right: usize = nodes[root].right();
                 if right == NIL {
-                    return (index, Ordering::Greater);
+                    return (root, Ordering::Greater);
                 }
-                index = right;
+                root = right;
             },
         };
     }
@@ -590,17 +585,19 @@ where
 ///
 /// assert!(nodes[node2].right() == node1);
 /// ```
-pub fn rotate_right<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
+pub fn rotate_right<K, N>(nodes: &mut [N], root: &mut usize, index: usize)
 where
-    T: BinaryNode<K>,
+    N: BinaryNode<K>,
 {
-    let len: usize = nodes.len();
-    if index < len {
+    //let len: usize = nodes.len();
+    //if index < len {
         let l: usize = nodes[index].left();
-        if l < len {
+        //if l < len {
+        if l != NIL {
             let p: usize = nodes[index].parent();
             nodes[l].set_parent(p);
-            if p < len {
+            //if p < len {
+            if p != NIL {
                 if index == nodes[p].left() {
                     nodes[p].set_left(l);
                 } else {
@@ -612,12 +609,13 @@ where
             nodes[index].set_parent(l);
             let r: usize = nodes[l].right();
             nodes[index].set_left(r);
-            if r < len {
+            //if r < len {
+            if r != NIL {
                 nodes[r].set_parent(index);
             }
             nodes[l].set_right(index);
         }
-    }
+    //}
 }
 
 /// Rotates the node at `index` to the left.
@@ -639,17 +637,19 @@ where
 ///
 /// assert!(nodes[node2].left() == node1);
 /// ```
-pub fn rotate_left<K, T>(nodes: &mut [T], root: &mut usize, index: usize)
+pub fn rotate_left<K, N>(nodes: &mut [N], root: &mut usize, index: usize)
 where
-    T: BinaryNode<K>,
+    N: BinaryNode<K>,
 {
-    let len: usize = nodes.len();
-    if index < len {
+    //let len: usize = nodes.len();
+    //if index < len {
         let r: usize = nodes[index].right();
-        if r < len {
+        //if r < len {
+        if r != NIL {
             let p: usize = nodes[index].parent();
             nodes[r].set_parent(p);
-            if p < len {
+            //if p < len {
+            if p != NIL {
                 if index == nodes[p].left() {
                     nodes[p].set_left(r);
                 } else {
@@ -661,12 +661,13 @@ where
             nodes[index].set_parent(r);
             let l: usize = nodes[r].left();
             nodes[index].set_right(l);
-            if l < len {
+            //if l < len {
+            if l != NIL {
                 nodes[l].set_parent(index);
             }
             nodes[r].set_left(index);
         }
-    }
+    //}
 }
 
 /// Returns the index of the next node in a pre-order traversal or `None` if there isn't one.
