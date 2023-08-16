@@ -473,9 +473,9 @@ where
 /// Inserts the node at `index` into the tree. Returns `Ok(())` if the key did not previously exist in the tree.
 /// If the key of the new node already exists in the tree, then it will return `Err(usize)` containing
 /// the index of the already existing node with the same key without replacing it.
-/// 
+///
 /// ## Panics:
-/// 
+///
 /// Panics if `root` or `index` are out of bounds.
 ///
 /// ## Example:
@@ -496,11 +496,7 @@ where
 /// let i = maximum(&nodes, root);
 /// assert!(*nodes[i].key() == 9, "Maximum value is {} instead of 9", nodes[i].key());
 /// ```
-pub fn insert<K, N>(
-    nodes: &mut [N],
-    root: &mut usize,
-    index: usize,
-) -> bool
+pub fn insert<K, N>(nodes: &mut [N], root: &mut usize, index: usize) -> Result<(), usize>
 where
     K: Ord + Copy,
     N: BinaryNode<K>,
@@ -511,7 +507,7 @@ where
     } else {
         let (p, order) = search(nodes, *root, nodes[index].key());
         match order {
-            Ordering::Equal => return false,
+            Ordering::Equal => return Err(p),
             Ordering::Greater => nodes[p].set_right(index),
             Ordering::Less => nodes[p].set_left(index),
         }
@@ -519,13 +515,13 @@ where
     }
     nodes[index].set_left(NIL);
     nodes[index].set_right(NIL);
-    true
+    Ok(())
 }
 
 /// Searches for the nodes containing `key` starting from `root`.
 /// Returns `Ok(usize)` containing the index of the node containing the key.
 /// Returns `Err(usize, bool) containing the index of the parent node and a bool value indicating
-/// whether the child is a left (true) or right (false) child. 
+/// whether the child is a left (true) or right (false) child.
 ///
 /// ## Example:
 ///
@@ -540,7 +536,8 @@ where
 /// let search_result = search(&nodes, root, &4).unwrap();
 /// assert!(4 == *nodes[search_result].key(), "Search returned {} instead of 4.", search_result);
 /// ```
-pub fn search<K, N>(nodes: &[N], mut root: usize, key: &K) -> (usize, Ordering) //Option<usize>
+pub fn search<K, N>(nodes: &[N], mut root: usize, key: &K) -> (usize, Ordering)
+//Option<usize>
 where
     K: Ord,
     N: BinaryNode<K>,
@@ -554,14 +551,14 @@ where
                     return (root, Ordering::Less);
                 }
                 root = left;
-            },
+            }
             Ordering::Greater => {
                 let right: usize = nodes[root].right();
                 if right == NIL {
                     return (root, Ordering::Greater);
                 }
                 root = right;
-            },
+            }
         };
     }
 }
@@ -591,30 +588,30 @@ where
 {
     //let len: usize = nodes.len();
     //if index < len {
-        let l: usize = nodes[index].left();
-        //if l < len {
-        if l != NIL {
-            let p: usize = nodes[index].parent();
-            nodes[l].set_parent(p);
-            //if p < len {
-            if p != NIL {
-                if index == nodes[p].left() {
-                    nodes[p].set_left(l);
-                } else {
-                    nodes[p].set_right(l);
-                }
+    let l: usize = nodes[index].left();
+    //if l < len {
+    if l != NIL {
+        let p: usize = nodes[index].parent();
+        nodes[l].set_parent(p);
+        //if p < len {
+        if p != NIL {
+            if index == nodes[p].left() {
+                nodes[p].set_left(l);
             } else {
-                *root = l;
+                nodes[p].set_right(l);
             }
-            nodes[index].set_parent(l);
-            let r: usize = nodes[l].right();
-            nodes[index].set_left(r);
-            //if r < len {
-            if r != NIL {
-                nodes[r].set_parent(index);
-            }
-            nodes[l].set_right(index);
+        } else {
+            *root = l;
         }
+        nodes[index].set_parent(l);
+        let r: usize = nodes[l].right();
+        nodes[index].set_left(r);
+        //if r < len {
+        if r != NIL {
+            nodes[r].set_parent(index);
+        }
+        nodes[l].set_right(index);
+    }
     //}
 }
 
@@ -643,30 +640,30 @@ where
 {
     //let len: usize = nodes.len();
     //if index < len {
-        let r: usize = nodes[index].right();
-        //if r < len {
-        if r != NIL {
-            let p: usize = nodes[index].parent();
-            nodes[r].set_parent(p);
-            //if p < len {
-            if p != NIL {
-                if index == nodes[p].left() {
-                    nodes[p].set_left(r);
-                } else {
-                    nodes[p].set_right(r);
-                }
+    let r: usize = nodes[index].right();
+    //if r < len {
+    if r != NIL {
+        let p: usize = nodes[index].parent();
+        nodes[r].set_parent(p);
+        //if p < len {
+        if p != NIL {
+            if index == nodes[p].left() {
+                nodes[p].set_left(r);
             } else {
-                *root = r;
+                nodes[p].set_right(r);
             }
-            nodes[index].set_parent(r);
-            let l: usize = nodes[r].left();
-            nodes[index].set_right(l);
-            //if l < len {
-            if l != NIL {
-                nodes[l].set_parent(index);
-            }
-            nodes[r].set_left(index);
+        } else {
+            *root = r;
         }
+        nodes[index].set_parent(r);
+        let l: usize = nodes[r].left();
+        nodes[index].set_right(l);
+        //if l < len {
+        if l != NIL {
+            nodes[l].set_parent(index);
+        }
+        nodes[r].set_left(index);
+    }
     //}
 }
 

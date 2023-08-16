@@ -134,7 +134,7 @@ where
     }
 }
 
-/// Inserts the node located at `index` into the treap. If the nodes key already exists in the treap, then 
+/// Inserts the node located at `index` into the treap. If the nodes key already exists in the treap, then
 /// it returns `Err(usize)` containing the index of the node that already contains the key.
 ///
 /// ## Arguments:
@@ -161,18 +161,18 @@ where
 ///     assert!(is_valid(&treap, root, Greater))
 /// }
 /// ```
-pub fn insert<K, P, N>(nodes: &mut [N], root: &mut usize, order: Ordering, index: usize) -> bool
+pub fn insert<K, P, N>(
+    nodes: &mut [N],
+    root: &mut usize,
+    order: Ordering,
+    index: usize,
+) -> Result<(), usize>
 where
     K: Ord + Copy,
     P: Ord + Copy,
     N: BinaryNode<K> + Priority<P>,
 {
-    if bst::insert(nodes, root, index) {
-        bubble_up(nodes, root, order, index);
-        true
-    } else {
-        false
-    }
+    bst::insert(nodes, root, index).map(|_| bubble_up(nodes, root, order, index))
 }
 
 /// Removes and returns the node at `index` from the treap.
@@ -638,8 +638,8 @@ where
         if self.root != bst::NIL {
             let (p, order) = bst::search(&self.treap, self.root, key);
             if order == Ordering::Equal {
-                return Some(self.treap[p].entry())
-            } 
+                return Some(self.treap[p].entry());
+            }
         }
         None
     }
@@ -663,7 +663,9 @@ where
             self.treap[self.root].set_right(bst::NIL);
         } else {
             let (p, order) = bst::search(&self.treap, self.root, &key);
-            if order == Ordering::Equal {return false}
+            if order == Ordering::Equal {
+                return false;
+            }
             let index: usize = self.treap.len();
             self.treap.push(TreapNode::from((key, priority)));
             if order == Ordering::Greater {
@@ -708,7 +710,7 @@ where
             let (index, order) = bst::search(&self.treap, self.root, key);
             if order == Ordering::Equal {
                 remove(&mut self.treap, &mut self.root, self.order, index);
-                return Some(*self.treap[index].entry())
+                return Some(*self.treap[index].entry());
             }
         }
         None
@@ -750,7 +752,7 @@ where
                     self.order,
                     index,
                     new_priority,
-                ))
+                ));
             }
         }
         None
@@ -836,7 +838,6 @@ where
     K: Ord + Copy + Hash + Default,
 {
     treap: BasicTreap<K, u64, true>,
-    root: usize,
 }
 
 impl<K> Default for HashedTreap<K>
@@ -857,7 +858,6 @@ where
     pub fn new() -> Self {
         Self {
             treap: BasicTreap::new(),
-            root: bst::NIL,
         }
     }
 
@@ -870,7 +870,6 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             treap: BasicTreap::with_capacity(capacity),
-            root: bst::NIL,
         }
     }
 
